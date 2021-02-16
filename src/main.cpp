@@ -80,7 +80,7 @@ int main(int argc, char** argv)
     {
         bool is_picking = false;
         int vertex      = 0;
-        float speed     = 0.0001f;
+        float force     = 100.f;
         int mouse_x, mouse_y;
     } picking_state;
 
@@ -178,9 +178,7 @@ int main(int argc, char** argv)
         Eigen::Vector3d const direction = (p2 - p1).normalized();
 
         fext.row(picking_state.vertex) =
-            direction.transpose() * static_cast<double>(picking_state.speed);
-        // model.positions().row(picking_state.vertex) +=
-        //    direction.transpose() * static_cast<double>(picking_state.speed);
+            direction.transpose() * static_cast<double>(picking_state.force);
 
         viewer.data().add_points(
             model.positions().row(picking_state.vertex),
@@ -200,9 +198,10 @@ int main(int argc, char** argv)
         return false;
     };
 
+    float dt = 0.166667;
     menu.callback_draw_viewer_window =
         [&]() {
-            ImGui::SetNextWindowSize(ImVec2(180.0f, 480.0f), ImGuiSetCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(300.0f, 480.0f), ImGuiSetCond_FirstUseEver);
             ImGui::Begin("Position Based Dynamics");
 
             float w = ImGui::GetContentRegionAvailWidth();
@@ -239,10 +238,15 @@ int main(int argc, char** argv)
                 }
             }
             ImGui::Checkbox("Simulate", &viewer.core().is_animating);
-
+            ImGui::InputFloat("Timestep", &dt, 0.01f, 0.1f, "%.4f");
             if (ImGui::CollapsingHeader("Picking", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGui::InputFloat("Speed", &picking_state.speed, 0.00001f, 0.0001f, "%.5f");
+                ImGui::InputFloat(
+                    "Dragging force",
+                    &picking_state.force,
+                    1.f,
+                    10.f,
+                    "%.1f");
             }
             ImGui::End();
         };
@@ -258,19 +262,12 @@ int main(int argc, char** argv)
     };
 
     viewer.callback_pre_draw = [&](igl::opengl::glfw::Viewer& viewer) -> bool {
-        static auto previous_tick = std::chrono::steady_clock::now();
-        auto const now_tick       = std::chrono::steady_clock::now();
-
-        auto const nanoseconds = static_cast<double>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(now_tick - previous_tick).count());
-        auto const to_seconds = static_cast<double>(1'000'000'000);
-        auto const dt         = nanoseconds / to_seconds;
-
         if (!is_model_ready())
             return false;
 
         if (viewer.core().is_animating)
         {
+            fext.col(1).array() -= 9.81;
             pbd::solve(model, fext, dt);
             fext.setZero();
         }
@@ -284,7 +281,7 @@ int main(int argc, char** argv)
         return false; // do not return from drawing loop
     };
 
-    viewer.core().is_animating = true;
+    viewer.core().is_animating = false;
     viewer.launch();
 
     return 0;

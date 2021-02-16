@@ -12,8 +12,7 @@ void solve(
     auto& x = model.positions();
 
     auto const& m            = model.mass();
-    Eigen::VectorXd const w  = 1. / m.array();
-    Eigen::MatrixX3d const a = fext.array().colwise() * w.array();
+    Eigen::MatrixX3d const a = fext.array().colwise() / m.array();
 
     // explicit euler step
     auto vexplicit    = v + dt * a;
