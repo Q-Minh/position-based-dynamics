@@ -28,12 +28,30 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(_libigl)
 
+find_package(range-v3 CONFIG REQUIRED)
+
 add_executable(pbd)
 set_target_properties(pbd PROPERTIES FOLDER position-based-dynamics)
 
+target_include_directories(pbd
+PRIVATE
+    include
+)
 target_sources(pbd
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/deformable_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/edge_length_constraint.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/deformable_mesh.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/edge_length_constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/solve.h
 )
 
-target_link_libraries(pbd PRIVATE igl::core igl::opengl_glfw_imgui)
+target_link_libraries(pbd 
+PRIVATE 
+    igl::core 
+    igl::opengl_glfw_imgui 
+    range-v3::range-v3
+)
