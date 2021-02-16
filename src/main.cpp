@@ -202,6 +202,7 @@ int main(int argc, char** argv)
 
     menu.callback_draw_viewer_window =
         [&]() {
+            ImGui::SetNextWindowSize(ImVec2(180.0f, 480.0f), ImGuiSetCond_FirstUseEver);
             ImGui::Begin("Position Based Dynamics");
 
             float w = ImGui::GetContentRegionAvailWidth();

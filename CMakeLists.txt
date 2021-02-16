@@ -48,6 +48,7 @@ PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/constraint.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/deformable_mesh.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/edge_length_constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/get_simple_cloth_model.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/solve.h
 )
 
