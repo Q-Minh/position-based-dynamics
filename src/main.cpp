@@ -1,23 +1,28 @@
+#include "deformable_mesh.h"
+#include "edge_length_constraint.h"
+#include "solve.h"
+
 #include <GLFW/glfw3.h>
+#include <chrono>
+#include <filesystem>
+#include <igl/file_dialog_open.h>
+#include <igl/marching_tets.h>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/readOBJ.h>
 #include <igl/unproject.h>
 #include <igl/unproject_onto_mesh.h>
-#include <igl/unproject_ray.h>
 
 int main(int argc, char** argv)
 {
-    if (argc < 2)
-    {
-        std::cerr << "Usage: ./pbd <path to obj mesh>\n";
-        return 1;
-    }
+    // Simulation state
+    pbd::deformable_mesh_t model{};
+    Eigen::MatrixX3d fext;
 
-    Eigen::MatrixXd V;
-    Eigen::MatrixXi F;
-    igl::readOBJ(argv[1], V, F);
+    auto const is_model_ready = [&]() {
+        return model.positions().rows() > 0;
+    };
 
     Eigen::MatrixXd Vbox(8, 3);
     Eigen::MatrixXi Ebox(12, 2);
@@ -48,16 +53,8 @@ int main(int argc, char** argv)
 		7, 3;
     // clang-format on
 
-    Eigen::RowVector3d vbox_mean = Vbox.colwise().mean();
-    Eigen::RowVector3d v_mean    = V.colwise().mean();
-    Vbox.rowwise() -= vbox_mean;
-    V.rowwise() -= v_mean;
-    V.rowwise() += Eigen::RowVector3d(0., .15, 0.);
-
     igl::opengl::glfw::Viewer viewer;
-    viewer.data().set_mesh(V, F);
     viewer.data().point_size = 10.f;
-    viewer.core().align_camera_center(V);
     viewer.data().show_lines = false;
 
     auto const draw_floor_points = [&]() {
@@ -83,18 +80,20 @@ int main(int argc, char** argv)
     {
         bool is_picking = false;
         int vertex      = 0;
-        float speed     = 0.001f;
+        float speed     = 0.0001f;
         int mouse_x, mouse_y;
     } picking_state;
 
     viewer.callback_mouse_down =
         [&](igl::opengl::glfw::Viewer& viewer, int button, int modifier) -> bool {
+        if (!is_model_ready())
+            return false;
+
         using button_type = igl::opengl::glfw::Viewer::MouseButton;
         if (static_cast<button_type>(button) != button_type::Left)
             return false;
 
-        if (modifier != GLFW_MOD_CONTROL)
-            return false;
+        bool const process_pick = modifier == GLFW_MOD_CONTROL || modifier == GLFW_MOD_SHIFT;
 
         int fid;
         double const x = static_cast<double>(viewer.current_mouse_x);
@@ -109,15 +108,18 @@ int main(int argc, char** argv)
             viewer.core().view,
             viewer.core().proj,
             viewer.core().viewport,
-            V,
-            F,
+            model.positions(),
+            model.faces(),
             fid,
             bc);
 
         if (!hit)
             return false;
 
-        Eigen::Vector3i const face{F(fid, 0), F(fid, 1), F(fid, 2)};
+        Eigen::Vector3i const face{
+            model.faces()(fid, 0),
+            model.faces()(fid, 1),
+            model.faces()(fid, 2)};
         unsigned int closest_vertex = face(0);
 
         if (bc(1) > bc(0) && bc(1) > bc(2))
@@ -129,17 +131,27 @@ int main(int argc, char** argv)
             closest_vertex = face(2);
         }
 
-        viewer.data().clear_points();
-        draw_floor_points();
-        viewer.data().add_points(V.row(closest_vertex), Eigen::RowVector3d(1., 0., 0.));
-        picking_state.is_picking = true;
-        picking_state.vertex     = closest_vertex;
+        if (modifier == GLFW_MOD_CONTROL)
+        {
+            viewer.data().add_points(
+                model.positions().row(closest_vertex),
+                Eigen::RowVector3d(1., 0., 0.));
+            picking_state.is_picking = true;
+            picking_state.vertex     = closest_vertex;
+        }
+        if (modifier == GLFW_MOD_SHIFT)
+        {
+            model.toggle_fixed(closest_vertex);
+        }
 
-        return true;
+        return process_pick;
     };
 
     viewer.callback_mouse_move =
         [&](igl::opengl::glfw::Viewer& viewer, int button, int modifier) -> bool {
+        if (!is_model_ready())
+            return false;
+
         if (!picking_state.is_picking)
             return false;
 
@@ -165,12 +177,14 @@ int main(int argc, char** argv)
 
         Eigen::Vector3d const direction = (p2 - p1).normalized();
 
-        V.row(picking_state.vertex) += direction * static_cast<double>(picking_state.speed);
-        viewer.data().set_mesh(V, F);
+        fext.row(picking_state.vertex) =
+            direction.transpose() * static_cast<double>(picking_state.speed);
+        // model.positions().row(picking_state.vertex) +=
+        //    direction.transpose() * static_cast<double>(picking_state.speed);
 
-        viewer.data().clear_points();
-        draw_floor_points();
-        viewer.data().add_points(V.row(picking_state.vertex), Eigen::RowVector3d(1., 0., 0.));
+        viewer.data().add_points(
+            model.positions().row(picking_state.vertex),
+            Eigen::RowVector3d(1., 0., 0.));
 
         picking_state.mouse_x = viewer.current_mouse_x;
         picking_state.mouse_y = viewer.current_mouse_y;
@@ -186,15 +200,90 @@ int main(int argc, char** argv)
         return false;
     };
 
-    menu.callback_draw_custom_window = [&]() {
-        ImGui::Begin("Position Based Dynamics");
-        if (ImGui::CollapsingHeader("Picking", ImGuiTreeNodeFlags_DefaultOpen))
+    menu.callback_draw_viewer_window =
+        [&]() {
+            ImGui::Begin("Position Based Dynamics");
+
+            float w = ImGui::GetContentRegionAvailWidth();
+            float p = ImGui::GetStyle().FramePadding.x;
+
+            if (ImGui::Button("Load##Mesh", ImVec2((w - p) / 2.f, 0)))
+            {
+                std::string const filename = igl::file_dialog_open();
+                std::filesystem::path const mesh{filename};
+                if (std::filesystem::exists(mesh) && std::filesystem::is_regular_file(mesh))
+                {
+                    Eigen::MatrixXd V;
+                    Eigen::MatrixXi F;
+                    igl::readOBJ(mesh.string(), V, F);
+
+                    Eigen::RowVector3d vbox_mean = Vbox.colwise().mean();
+                    Eigen::RowVector3d v_mean    = V.colwise().mean();
+                    Vbox.rowwise() -= vbox_mean;
+                    V.rowwise() -= v_mean;
+                    V.rowwise() += Eigen::RowVector3d(0., .15, 0.);
+
+                    model = pbd::deformable_mesh_t{
+                    V,
+                    F,
+                    F /* When we'll work with tet meshes, we will give tets as argument here */};
+
+                    model.constrain_edge_lengths();
+
+                    fext.resizeLike(model.positions());
+                    fext.setZero();
+
+                    viewer.data().set_mesh(model.positions(), model.faces());
+                    viewer.core().align_camera_center(model.positions());
+                }
+            }
+            ImGui::Checkbox("Simulate", &viewer.core().is_animating);
+
+            if (ImGui::CollapsingHeader("Picking", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::InputFloat("Speed", &picking_state.speed, 0.00001f, 0.0001f, "%.5f");
+            }
+            ImGui::End();
+        };
+
+    auto const draw_fixed_points = [&]() {
+        for (auto i = 0u; i < model.positions().rows(); ++i)
         {
-            ImGui::InputFloat("Speed", &picking_state.speed, 0.0001f);
+            if (!model.is_fixed(i))
+                continue;
+
+            viewer.data().add_points(model.positions().row(i), Eigen::RowVector3d{1., 0., 0.});
         }
-        ImGui::End();
     };
 
+    viewer.callback_pre_draw = [&](igl::opengl::glfw::Viewer& viewer) -> bool {
+        static auto previous_tick = std::chrono::steady_clock::now();
+        auto const now_tick       = std::chrono::steady_clock::now();
+
+        auto const nanoseconds = static_cast<double>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(now_tick - previous_tick).count());
+        auto const to_seconds = static_cast<double>(1'000'000'000);
+        auto const dt         = nanoseconds / to_seconds;
+
+        if (!is_model_ready())
+            return false;
+
+        if (viewer.core().is_animating)
+        {
+            pbd::solve(model, fext, dt);
+            fext.setZero();
+        }
+
+        viewer.data().clear();
+        viewer.data().set_mesh(model.positions(), model.faces());
+        draw_fixed_points();
+        draw_floor_points();
+        draw_floor_edges();
+
+        return false; // do not return from drawing loop
+    };
+
+    viewer.core().is_animating = true;
     viewer.launch();
 
     return 0;

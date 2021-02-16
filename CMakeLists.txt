@@ -32,6 +32,7 @@ find_package(range-v3 CONFIG REQUIRED)
 
 add_executable(pbd)
 set_target_properties(pbd PROPERTIES FOLDER position-based-dynamics)
+target_compile_features(pbd PRIVATE cxx_std_17)
 
 target_include_directories(pbd
 PRIVATE
@@ -42,6 +43,7 @@ PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/deformable_mesh.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/edge_length_constraint.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/solve.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/include/constraint.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/deformable_mesh.h
