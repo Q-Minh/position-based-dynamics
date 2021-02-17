@@ -20,7 +20,7 @@ class constraint_t
 
     virtual scalar_type evaluate(positions_type const& V, masses_type const& M) const = 0;
     virtual void project(positions_type& V, masses_type const& M) const               = 0;
-    virtual std::vector<index_type> const& indices() const { return indices_; }
+    std::vector<index_type> const& indices() const { return indices_; }
 
   private:
     std::vector<index_type> indices_;
