@@ -28,7 +28,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(_libigl)
 
-find_package(range-v3 CONFIG REQUIRED)
+# find_package(range-v3 CONFIG REQUIRED)
 
 add_executable(pbd)
 set_target_properties(pbd PROPERTIES FOLDER position-based-dynamics)
@@ -56,5 +56,5 @@ target_link_libraries(pbd
 PRIVATE 
     igl::core 
     igl::opengl_glfw_imgui 
-    range-v3::range-v3
+    # range-v3::range-v3
 )

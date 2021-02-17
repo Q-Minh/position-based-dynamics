@@ -70,9 +70,6 @@ int main(int argc, char** argv)
         }
     };
 
-    draw_floor_points();
-    draw_floor_edges();
-
     igl::opengl::glfw::imgui::ImGuiMenu menu;
     viewer.plugins.push_back(&menu);
 
@@ -80,7 +77,7 @@ int main(int argc, char** argv)
     {
         bool is_picking = false;
         int vertex      = 0;
-        float force     = 100.f;
+        float force     = 400.f;
         int mouse_x, mouse_y;
     } picking_state;
 
@@ -133,9 +130,6 @@ int main(int argc, char** argv)
 
         if (modifier == GLFW_MOD_CONTROL)
         {
-            viewer.data().add_points(
-                model.positions().row(closest_vertex),
-                Eigen::RowVector3d(1., 0., 0.));
             picking_state.is_picking = true;
             picking_state.vertex     = closest_vertex;
         }
@@ -275,8 +269,8 @@ int main(int argc, char** argv)
         viewer.data().clear();
         viewer.data().set_mesh(model.positions(), model.faces());
         draw_fixed_points();
-        draw_floor_points();
-        draw_floor_edges();
+        //draw_floor_points();
+        //draw_floor_edges();
 
         return false; // do not return from drawing loop
     };
