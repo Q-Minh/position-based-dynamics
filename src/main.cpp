@@ -19,6 +19,8 @@ int main(int argc, char** argv)
     // Simulation state
     pbd::deformable_mesh_t model{};
     Eigen::MatrixX3d fext;
+    bool is_gravity_active = false;
+    float dt               = 0.166667;
 
     auto const is_model_ready = [&]() {
         return model.positions().rows() > 0;
@@ -192,16 +194,16 @@ int main(int argc, char** argv)
         return false;
     };
 
-    float dt = 0.166667;
-    menu.callback_draw_viewer_window =
-        [&]() {
-            ImGui::SetNextWindowSize(ImVec2(300.0f, 480.0f), ImGuiSetCond_FirstUseEver);
-            ImGui::Begin("Position Based Dynamics");
+    menu.callback_draw_viewer_window = [&]() {
+        ImGui::SetNextWindowSize(ImVec2(300.0f, 480.0f), ImGuiSetCond_FirstUseEver);
+        ImGui::Begin("Position Based Dynamics");
 
-            float w = ImGui::GetContentRegionAvailWidth();
-            float p = ImGui::GetStyle().FramePadding.x;
+        float const w = ImGui::GetContentRegionAvailWidth();
+        float const p = ImGui::GetStyle().FramePadding.x;
 
-            if (ImGui::Button("Load##Mesh", ImVec2((w - p) / 2.f, 0)))
+        if (ImGui::CollapsingHeader("File I/O", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            if (ImGui::Button("Load OBJ", ImVec2((w - p) / 2.f, 0)))
             {
                 std::string const filename = igl::file_dialog_open();
                 std::filesystem::path const mesh{filename};
@@ -231,19 +233,27 @@ int main(int argc, char** argv)
                     viewer.core().align_camera_center(model.positions());
                 }
             }
-            ImGui::Checkbox("Simulate", &viewer.core().is_animating);
+        }
+
+        if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen))
+        {
             ImGui::InputFloat("Timestep", &dt, 0.01f, 0.1f, "%.4f");
-            if (ImGui::CollapsingHeader("Picking", ImGuiTreeNodeFlags_DefaultOpen))
-            {
-                ImGui::InputFloat(
-                    "Dragging force",
-                    &picking_state.force,
-                    1.f,
-                    10.f,
-                    "%.1f");
-            }
-            ImGui::End();
-        };
+            ImGui::Checkbox("Gravity", &is_gravity_active);
+            ImGui::Checkbox("Simulate", &viewer.core().is_animating);
+        }
+
+        if (ImGui::CollapsingHeader("Picking", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::BulletText("Hold SHIFT and left click points\non the model to fix/unfix them");
+            ImGui::BulletText(
+                "Hold CTRL and hold left mouse\n"
+                "button while dragging your\n"
+                "mouse to apply external\n"
+                "forces to the model");
+            ImGui::InputFloat("Dragging force", &picking_state.force, 1.f, 10.f, "%.1f");
+        }
+        ImGui::End();
+    };
 
     auto const draw_fixed_points = [&]() {
         for (auto i = 0u; i < model.positions().rows(); ++i)
@@ -261,7 +271,7 @@ int main(int argc, char** argv)
 
         if (viewer.core().is_animating)
         {
-            fext.col(1).array() -= 9.81;
+            fext.col(1).array() -= is_gravity_active ? 9.81 : 0.;
             pbd::solve(model, fext, dt);
             fext.setZero();
         }
@@ -269,8 +279,8 @@ int main(int argc, char** argv)
         viewer.data().clear();
         viewer.data().set_mesh(model.positions(), model.faces());
         draw_fixed_points();
-        //draw_floor_points();
-        //draw_floor_edges();
+        // draw_floor_points();
+        // draw_floor_edges();
 
         return false; // do not return from drawing loop
     };
