@@ -21,10 +21,10 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> get_simple_cloth_model(int rows, int
             if (i == rows - 1u || j == cols - 1u)
                 continue;
 
-            auto const upper_left_corner  = i * cols + j;
-            auto const upper_right_corner = i * cols + (j + 1);
-            auto const lower_left_corner  = (i + 1) * cols + j;
-            auto const lower_right_corner = (i + 1) * cols + (j + 1);
+            auto const lower_left_corner  = i * cols + j;
+            auto const upper_left_corner  = i * cols + (j + 1);
+            auto const lower_right_corner = (i + 1) * cols + j;
+            auto const upper_right_corner = (i + 1) * cols + (j + 1);
 
             cloth_faces.push_back(
                 Eigen::RowVector3i{lower_left_corner, upper_right_corner, upper_left_corner});
@@ -39,6 +39,8 @@ std::pair<Eigen::MatrixXd, Eigen::MatrixXi> get_simple_cloth_model(int rows, int
         VCloth.row(i) = cloth_positions[i];
     for (auto i = 0u; i < cloth_faces.size(); ++i)
         FCloth.row(i) = cloth_faces[i];
+
+    return {VCloth, FCloth};
 }
 
 } // namespace geometry

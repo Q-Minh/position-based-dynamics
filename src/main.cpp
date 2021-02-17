@@ -21,6 +21,7 @@ int main(int argc, char** argv)
     Eigen::MatrixX3d fext;
     bool is_gravity_active = false;
     float dt               = 0.166667;
+    int solver_iterations  = 10;
 
     auto const is_model_ready = [&]() {
         return model.positions().rows() > 0;
@@ -57,7 +58,6 @@ int main(int argc, char** argv)
 
     igl::opengl::glfw::Viewer viewer;
     viewer.data().point_size = 10.f;
-    viewer.data().show_lines = false;
 
     auto const draw_floor_points = [&]() {
         viewer.data().add_points(Vbox, Eigen::RowVector3d(1, 0, 0));
@@ -238,6 +238,7 @@ int main(int argc, char** argv)
         if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen))
         {
             ImGui::InputFloat("Timestep", &dt, 0.01f, 0.1f, "%.4f");
+            ImGui::InputInt("Solver iterations", &solver_iterations);
             ImGui::Checkbox("Gravity", &is_gravity_active);
             ImGui::Checkbox("Simulate", &viewer.core().is_animating);
         }
@@ -251,6 +252,15 @@ int main(int argc, char** argv)
                 "mouse to apply external\n"
                 "forces to the model");
             ImGui::InputFloat("Dragging force", &picking_state.force, 1.f, 10.f, "%.1f");
+        }
+
+        if (ImGui::CollapsingHeader("Visualization", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            ImGui::Checkbox(
+                "Wireframe",
+                [&]() { return viewer.data().show_lines != 0u; },
+                [&](bool value) { viewer.data().show_lines = value; });
+            ImGui::InputFloat("Point size", &viewer.data().point_size, 1.f, 10.f);
         }
         ImGui::End();
     };
@@ -272,7 +282,7 @@ int main(int argc, char** argv)
         if (viewer.core().is_animating)
         {
             fext.col(1).array() -= is_gravity_active ? 9.81 : 0.;
-            pbd::solve(model, fext, dt);
+            pbd::solve(model, fext, dt, static_cast<std::uint32_t>(solver_iterations));
             fext.setZero();
         }
 
