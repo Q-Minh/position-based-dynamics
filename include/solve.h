@@ -9,7 +9,8 @@ void solve(
     deformable_mesh_t& model,
     Eigen::MatrixX3d const& fext,
     double dt                = 0.01,
-    std::uint32_t iterations = 10);
+    std::uint32_t iterations = 10, 
+    std::uint32_t substeps = 10);
 
 } // namespace pbd
 

@@ -22,6 +22,7 @@ int main(int argc, char** argv)
     bool is_gravity_active = false;
     float dt               = 0.166667;
     int solver_iterations  = 10;
+    int solver_substeps    = 10;
 
     auto const is_model_ready = [&]() {
         return model.positions().rows() > 0;
@@ -58,6 +59,7 @@ int main(int argc, char** argv)
 
     igl::opengl::glfw::Viewer viewer;
     viewer.data().point_size = 10.f;
+    viewer.core().is_animating = false;
 
     auto const draw_floor_points = [&]() {
         viewer.data().add_points(Vbox, Eigen::RowVector3d(1, 0, 0));
@@ -163,7 +165,7 @@ int main(int argc, char** argv)
                                        viewer.core().proj,
                                        viewer.core().viewport)
                                        .cast<double>();
-        ;
+        
         Eigen::Vector3d const p2 = igl::unproject(
                                        Eigen::Vector3f(x2, y2, .5f),
                                        viewer.core().view,
@@ -239,6 +241,7 @@ int main(int argc, char** argv)
         {
             ImGui::InputFloat("Timestep", &dt, 0.01f, 0.1f, "%.4f");
             ImGui::InputInt("Solver iterations", &solver_iterations);
+            ImGui::InputInt("Solver substeps", &solver_substeps);
             ImGui::Checkbox("Gravity", &is_gravity_active);
             ImGui::Checkbox("Simulate", &viewer.core().is_animating);
         }
@@ -282,7 +285,12 @@ int main(int argc, char** argv)
         if (viewer.core().is_animating)
         {
             fext.col(1).array() -= is_gravity_active ? 9.81 : 0.;
-            pbd::solve(model, fext, dt, static_cast<std::uint32_t>(solver_iterations));
+            pbd::solve(
+                model,
+                fext,
+                dt,
+                static_cast<std::uint32_t>(solver_iterations),
+                static_cast<std::uint32_t>(solver_substeps));
             fext.setZero();
         }
 
@@ -295,7 +303,6 @@ int main(int argc, char** argv)
         return false; // do not return from drawing loop
     };
 
-    viewer.core().is_animating = false;
     viewer.launch();
 
     return 0;
