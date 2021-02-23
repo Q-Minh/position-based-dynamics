@@ -12,9 +12,11 @@
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
+#include <igl/readMESH.h>
 #include <igl/read_triangle_mesh.h>
 #include <igl/unproject.h>
 #include <igl/unproject_onto_mesh.h>
+#include <igl/writeMESH.h>
 #include <igl/write_triangle_mesh.h>
 
 int main(int argc, char** argv)
@@ -243,6 +245,40 @@ int main(int argc, char** argv)
                 std::filesystem::path const mesh{filename};
                 igl::write_triangle_mesh(mesh.string(), model.positions(), model.faces());
             }
+            if (ImGui::Button("Load tet mesh", ImVec2((w - p) / 2.f, 0)))
+            {
+                std::string const filename = igl::file_dialog_open();
+                std::filesystem::path const mesh{filename};
+                if (std::filesystem::exists(mesh) && std::filesystem::is_regular_file(mesh))
+                {
+                    Eigen::MatrixXd V;
+                    Eigen::MatrixXi T, F;
+                    if (igl::readMESH(mesh.string(), V, T, F))
+                    {
+                        Eigen::RowVector3d vbox_mean = Vbox.colwise().mean();
+                        Eigen::RowVector3d v_mean    = V.colwise().mean();
+                        Vbox.rowwise() -= vbox_mean;
+                        V.rowwise() -= v_mean;
+                        V.array() /= V.maxCoeff() - V.minCoeff();
+
+                        model = pbd::deformable_mesh_t{V, F, T};
+
+                        fext.resizeLike(model.positions());
+                        fext.setZero();
+
+                        viewer.data().clear();
+                        viewer.data().set_mesh(model.positions(), model.faces());
+                        viewer.core().align_camera_center(model.positions());
+                    }
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Save tet mesh", ImVec2((w - p) / 2.f, 0)))
+            {
+                std::string const filename = igl::file_dialog_save();
+                std::filesystem::path const mesh{filename};
+                igl::writeMESH(mesh.string(), model.positions(), model.elements(), model.faces());
+            }
         }
         if (ImGui::CollapsingHeader("Geometry", ImGuiTreeNodeFlags_DefaultOpen))
         {
@@ -285,11 +321,17 @@ int main(int argc, char** argv)
         {
             if (ImGui::TreeNode("Constraints"))
             {
-                if (ImGui::Button("Constrain Edge length", ImVec2((w - p) / 2.f, 0)) &&
-                    model.constraints().empty())
+                if (ImGui::Button("Constrain Edge Length", ImVec2((w - p) / 2.f, 0)))
                 {
                     model.constrain_edge_lengths();
-                    viewer.core().align_camera_center(model.positions());
+                }
+                if (ImGui::Button("Constrain Tet Volume", ImVec2((w - p) / 2.f, 0)))
+                {
+                    model.constrain_tetrahedron_volumes();
+                }
+                if (ImGui::Button("Reset##Constraints", ImVec2((w - p) / 2.f, 0)))
+                {
+                    model.constraints().clear();
                 }
                 std::string const constraint_count = std::to_string(model.constraints().size());
                 ImGui::BulletText(std::string("Constraints: " + constraint_count).c_str());
@@ -310,7 +352,7 @@ int main(int argc, char** argv)
                 "button while dragging your\n"
                 "mouse to apply external\n"
                 "forces to the model");
-            ImGui::InputFloat("Dragging force", &picking_state.force, 1.f, 10.f, "%.1f");
+            ImGui::InputFloat("Dragging force", &picking_state.force, 1.f, 10.f, "%.3f");
         }
 
         if (ImGui::CollapsingHeader("Visualization", ImGuiTreeNodeFlags_DefaultOpen))
@@ -348,10 +390,10 @@ int main(int argc, char** argv)
                 static_cast<std::uint32_t>(solver_iterations),
                 static_cast<std::uint32_t>(solver_substeps));
             fext.setZero();
+            viewer.data().clear();
+            viewer.data().set_mesh(model.positions(), model.faces());
         }
 
-        viewer.data().clear();
-        viewer.data().set_mesh(model.positions(), model.faces());
         draw_fixed_points();
         // draw_floor_points();
         // draw_floor_edges();

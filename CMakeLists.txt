@@ -42,15 +42,18 @@ PRIVATE
 target_sources(pbd
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    
     ${CMAKE_CURRENT_SOURCE_DIR}/src/deformable_mesh.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/edge_length_constraint.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/solve.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/tetrahedron_volume_constraint.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/include/constraint.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/deformable_mesh.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/edge_length_constraint.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/get_simple_cloth_model.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/solve.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/tetrahedron_volume_constraint.h
 )
 
 target_link_libraries(pbd 

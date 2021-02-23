@@ -1,6 +1,7 @@
 #include "deformable_mesh.h"
 
 #include "edge_length_constraint.h"
+#include "tetrahedron_volume_constraint.h"
 
 #include <array>
 #include <igl/barycenter.h>
@@ -76,6 +77,26 @@ void deformable_mesh_t::constrain_edge_lengths()
                 static_cast<std::uint32_t>(e0),
                 static_cast<std::uint32_t>(e1)},
             d);
+
+        this->constraints().push_back(std::move(constraint));
+    }
+}
+
+void deformable_mesh_t::constrain_tetrahedron_volumes()
+{
+    auto const& positions = this->positions();
+    auto const& elements  = this->elements();
+
+    for (auto i = 0u; i < elements.rows(); ++i)
+    {
+        auto const element = elements.row(i);
+        auto constraint = std::make_unique<tetrahedron_volume_constraint_t>(
+            std::initializer_list<std::uint32_t>{
+                static_cast<std::uint32_t>(element(0)),
+                static_cast<std::uint32_t>(element(1)),
+                static_cast<std::uint32_t>(element(2)),
+                static_cast<std::uint32_t>(element(3))},
+            positions);
 
         this->constraints().push_back(std::move(constraint));
     }

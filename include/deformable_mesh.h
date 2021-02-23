@@ -70,8 +70,10 @@ class deformable_mesh_t
     masses_type& mass() { return m_; }
     std::vector<bool>& fixed() { return fixed_; }
 
+    void immobilize() { v_.setZero(); }
     void tetrahedralize(Eigen::MatrixXd const& V, Eigen::MatrixXi const& F);
     void constrain_edge_lengths();
+    void constrain_tetrahedron_volumes();
 
   private:
     positions_type p_;             ///< Positions
