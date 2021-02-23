@@ -13,7 +13,7 @@ set(LIBIGL_WITH_EMBREE            OFF CACHE INTERNAL "Use Embree"               
 set(LIBIGL_WITH_MATLAB            OFF CACHE INTERNAL "Use Matlab"                   )
 set(LIBIGL_WITH_MOSEK             OFF CACHE INTERNAL "Use MOSEK"                    )
 set(LIBIGL_WITH_PNG               OFF CACHE INTERNAL "Use PNG"                      )
-set(LIBIGL_WITH_TETGEN            OFF CACHE INTERNAL "Use Tetgen"                   )
+set(LIBIGL_WITH_TETGEN            ON  CACHE INTERNAL "Use Tetgen"                   )
 set(LIBIGL_WITH_TRIANGLE          OFF CACHE INTERNAL "Use Triangle"                 )
 set(LIBIGL_WITH_PREDICATES        OFF CACHE INTERNAL "Use exact predicates"         )
 set(LIBIGL_WITH_XML               OFF CACHE INTERNAL "Use XML"                      )
@@ -38,6 +38,7 @@ target_include_directories(pbd
 PRIVATE
     include
 )
+
 target_sources(pbd
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
@@ -55,6 +56,7 @@ PRIVATE
 target_link_libraries(pbd 
 PRIVATE 
     igl::core 
-    igl::opengl_glfw_imgui 
+    igl::tetgen
+    igl::opengl_glfw_imgui
     # range-v3::range-v3
 )

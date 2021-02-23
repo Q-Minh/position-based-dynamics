@@ -5,14 +5,17 @@
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <filesystem>
+#include <igl/decimate.h>
 #include <igl/file_dialog_open.h>
+#include <igl/file_dialog_save.h>
 #include <igl/marching_tets.h>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
-#include <igl/readOBJ.h>
+#include <igl/read_triangle_mesh.h>
 #include <igl/unproject.h>
 #include <igl/unproject_onto_mesh.h>
+#include <igl/write_triangle_mesh.h>
 
 int main(int argc, char** argv)
 {
@@ -23,6 +26,7 @@ int main(int argc, char** argv)
     float dt               = 0.166667;
     int solver_iterations  = 10;
     int solver_substeps    = 10;
+    bool constrain_by_edge_length{false};
 
     auto const is_model_ready = [&]() {
         return model.positions().rows() > 0;
@@ -58,7 +62,7 @@ int main(int argc, char** argv)
     // clang-format on
 
     igl::opengl::glfw::Viewer viewer;
-    viewer.data().point_size = 10.f;
+    viewer.data().point_size   = 10.f;
     viewer.core().is_animating = false;
 
     auto const draw_floor_points = [&]() {
@@ -165,7 +169,7 @@ int main(int argc, char** argv)
                                        viewer.core().proj,
                                        viewer.core().viewport)
                                        .cast<double>();
-        
+
         Eigen::Vector3d const p2 = igl::unproject(
                                        Eigen::Vector3f(x2, y2, .5f),
                                        viewer.core().view,
@@ -205,7 +209,7 @@ int main(int argc, char** argv)
 
         if (ImGui::CollapsingHeader("File I/O", ImGuiTreeNodeFlags_DefaultOpen))
         {
-            if (ImGui::Button("Load OBJ", ImVec2((w - p) / 2.f, 0)))
+            if (ImGui::Button("Load triangle mesh", ImVec2((w - p) / 2.f, 0)))
             {
                 std::string const filename = igl::file_dialog_open();
                 std::filesystem::path const mesh{filename};
@@ -213,32 +217,84 @@ int main(int argc, char** argv)
                 {
                     Eigen::MatrixXd V;
                     Eigen::MatrixXi F;
-                    igl::readOBJ(mesh.string(), V, F);
+                    if (igl::read_triangle_mesh(mesh.string(), V, F))
+                    {
+                        Eigen::RowVector3d vbox_mean = Vbox.colwise().mean();
+                        Eigen::RowVector3d v_mean    = V.colwise().mean();
+                        Vbox.rowwise() -= vbox_mean;
+                        V.rowwise() -= v_mean;
+                        V.rowwise() += Eigen::RowVector3d(0., .15, 0.);
 
-                    Eigen::RowVector3d vbox_mean = Vbox.colwise().mean();
-                    Eigen::RowVector3d v_mean    = V.colwise().mean();
-                    Vbox.rowwise() -= vbox_mean;
-                    V.rowwise() -= v_mean;
-                    V.rowwise() += Eigen::RowVector3d(0., .15, 0.);
+                        model = pbd::deformable_mesh_t{V, F, F};
 
-                    model = pbd::deformable_mesh_t{
-                    V,
-                    F,
-                    F /* When we'll work with tet meshes, we will give tets as argument here */};
+                        fext.resizeLike(model.positions());
+                        fext.setZero();
 
-                    model.constrain_edge_lengths();
-
-                    fext.resizeLike(model.positions());
-                    fext.setZero();
-
+                        viewer.data().clear();
+                        viewer.data().set_mesh(model.positions(), model.faces());
+                        viewer.core().align_camera_center(model.positions());
+                    }
+                }
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Save triangle mesh", ImVec2((w - p) / 2.f, 0)))
+            {
+                std::string const filename = igl::file_dialog_save();
+                std::filesystem::path const mesh{filename};
+                igl::write_triangle_mesh(mesh.string(), model.positions(), model.faces());
+            }
+        }
+        if (ImGui::CollapsingHeader("Geometry", ImGuiTreeNodeFlags_DefaultOpen))
+        {
+            if (ImGui::TreeNode("Decimation"))
+            {
+                static int max_facet_count = 30'000;
+                ImGui::InputInt("Max facet count", &max_facet_count);
+                if (ImGui::Button("Simplify", ImVec2((w - p) / 2.f, 0)))
+                {
+                    Eigen::MatrixXd V;
+                    Eigen::MatrixXi F;
+                    Eigen::VectorXi J;
+                    igl::decimate(model.positions(), model.faces(), max_facet_count, V, F, J);
+                    model = pbd::deformable_mesh_t{V, F, F};
+                    viewer.data().clear();
                     viewer.data().set_mesh(model.positions(), model.faces());
                     viewer.core().align_camera_center(model.positions());
                 }
+                ImGui::TreePop();
             }
+            if (ImGui::TreeNode("Tetrahedralization"))
+            {
+                if (ImGui::Button("Tetrahedralize", ImVec2((w - p) / 2.f, 0)))
+                {
+                    model.tetrahedralize(model.positions(), model.faces());
+                    viewer.data().clear();
+                    viewer.data().set_mesh(model.positions(), model.faces());
+                    viewer.core().align_camera_center(model.positions());
+                }
+                ImGui::TreePop();
+            }
+            std::string const vertex_count  = std::to_string(model.positions().rows());
+            std::string const element_count = std::to_string(model.elements().rows());
+            std::string const facet_count   = std::to_string(model.faces().rows());
+            ImGui::BulletText(std::string("Vertices: " + vertex_count).c_str());
+            ImGui::BulletText(std::string("Elements: " + element_count).c_str());
+            ImGui::BulletText(std::string("Faces: " + facet_count).c_str());
         }
-
         if (ImGui::CollapsingHeader("Physics", ImGuiTreeNodeFlags_DefaultOpen))
         {
+            if (ImGui::TreeNode("Constraints"))
+            {
+                if (ImGui::Button("Constrain Edge length", ImVec2((w - p) / 2.f, 0)) &&
+                    model.constraints().empty())
+                {
+                    model.constrain_edge_lengths();
+                    viewer.core().align_camera_center(model.positions());
+                }
+                std::string const constraint_count = std::to_string(model.constraints().size());
+                ImGui::BulletText(std::string("Constraints: " + constraint_count).c_str());
+                ImGui::TreePop();
+            }
             ImGui::InputFloat("Timestep", &dt, 0.01f, 0.1f, "%.4f");
             ImGui::InputInt("Solver iterations", &solver_iterations);
             ImGui::InputInt("Solver substeps", &solver_substeps);
@@ -303,6 +359,7 @@ int main(int argc, char** argv)
         return false; // do not return from drawing loop
     };
 
+    viewer.core().rotation_type == igl::opengl::ViewerCore::RotationType::ROTATION_TYPE_TRACKBALL;
     viewer.launch();
 
     return 0;

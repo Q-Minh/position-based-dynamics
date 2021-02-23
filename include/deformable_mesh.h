@@ -36,7 +36,7 @@ class deformable_mesh_t
     deformable_mesh_t(
         positions_type const& positions,
         faces_type const& faces,
-        elements_type const& elements)
+        elements_type const& elements = elements_type{})
         : p_(positions),
           F_(faces),
           E_(elements),
@@ -70,6 +70,7 @@ class deformable_mesh_t
     masses_type& mass() { return m_; }
     std::vector<bool>& fixed() { return fixed_; }
 
+    void tetrahedralize(Eigen::MatrixXd const& V, Eigen::MatrixXi const& F);
     void constrain_edge_lengths();
 
   private:
