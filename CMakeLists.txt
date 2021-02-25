@@ -42,18 +42,30 @@ PRIVATE
 target_sources(pbd
 PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
-    
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/deformable_mesh.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/edge_length_constraint.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/solve.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/tetrahedron_volume_constraint.cpp
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/constraint.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/deformable_mesh.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/edge_length_constraint.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/get_simple_cloth_model.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/solve.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/tetrahedron_volume_constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pbd/deformable_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pbd/edge_length_constraint.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pbd/green_strain_elastic_constraint.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pbd/solve.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pbd/tetrahedron_volume_constraint.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/mouse_down_handler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/mouse_move_handler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/pre_draw_handler.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/deformable_mesh.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/edge_length_constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/get_simple_cloth_model.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/green_strain_elastic_constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/solve.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/tetrahedron_volume_constraint.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/mouse_down_handler.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/mouse_move_handler.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/physics_params.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/picking_state.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/pre_draw_handler.h
 )
 
 target_link_libraries(pbd 

@@ -1,9 +1,13 @@
-#include "deformable_mesh.h"
-#include "edge_length_constraint.h"
-#include "solve.h"
+#include "pbd/deformable_mesh.h"
+#include "pbd/edge_length_constraint.h"
+#include "pbd/solve.h"
+#include "ui/mouse_down_handler.h"
+#include "ui/mouse_move_handler.h"
+#include "ui/physics_params.h"
+#include "ui/picking_state.h"
+#include "ui/pre_draw_handler.h"
 
-#include <GLFW/glfw3.h>
-#include <chrono>
+#include <array>
 #include <filesystem>
 #include <igl/decimate.h>
 #include <igl/file_dialog_open.h>
@@ -14,185 +18,32 @@
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/readMESH.h>
 #include <igl/read_triangle_mesh.h>
-#include <igl/unproject.h>
-#include <igl/unproject_onto_mesh.h>
 #include <igl/writeMESH.h>
 #include <igl/write_triangle_mesh.h>
 
 int main(int argc, char** argv)
 {
-    // Simulation state
     pbd::deformable_mesh_t model{};
     Eigen::MatrixX3d fext;
-    bool is_gravity_active = false;
-    float dt               = 0.166667;
-    int solver_iterations  = 10;
-    int solver_substeps    = 10;
-    bool constrain_by_edge_length{false};
+    ui::picking_state_t picking_state{};
+    ui::physics_params_t physics_params{};
 
     auto const is_model_ready = [&]() {
         return model.positions().rows() > 0;
     };
 
-    Eigen::MatrixXd Vbox(8, 3);
-    Eigen::MatrixXi Ebox(12, 2);
-
-    // clang-format off
-	Vbox <<
-		0., 0., 0.,
-		1., 0., 0.,
-		1., .01, 0.,
-		0., .01, 0.,
-		0., 0., 1.,
-		1., 0., 1.,
-		1., .01, 1.,
-		0., .01, 1.;
-
-	Ebox <<
-		0, 1,
-		1, 2,
-		2, 3,
-		3, 0,
-		4, 5,
-		5, 6,
-		6, 7,
-		7, 4,
-		0, 4,
-		1, 5,
-		2, 6,
-		7, 3;
-    // clang-format on
-
     igl::opengl::glfw::Viewer viewer;
     viewer.data().point_size   = 10.f;
     viewer.core().is_animating = false;
-
-    auto const draw_floor_points = [&]() {
-        viewer.data().add_points(Vbox, Eigen::RowVector3d(1, 0, 0));
-    };
-    auto const draw_floor_edges = [&]() {
-        for (auto i = 0u; i < Ebox.rows(); ++i)
-        {
-            viewer.data().add_edges(
-                Vbox.row(Ebox(i, 0)),
-                Vbox.row(Ebox(i, 1)),
-                Eigen::RowVector3d(1, 0, 0));
-        }
-    };
+    viewer.core().rotation_type == igl::opengl::ViewerCore::RotationType::ROTATION_TYPE_TRACKBALL;
 
     igl::opengl::glfw::imgui::ImGuiMenu menu;
     viewer.plugins.push_back(&menu);
 
-    struct picking_state_t
-    {
-        bool is_picking = false;
-        int vertex      = 0;
-        float force     = 400.f;
-        int mouse_x, mouse_y;
-    } picking_state;
-
-    viewer.callback_mouse_down =
-        [&](igl::opengl::glfw::Viewer& viewer, int button, int modifier) -> bool {
-        if (!is_model_ready())
-            return false;
-
-        using button_type = igl::opengl::glfw::Viewer::MouseButton;
-        if (static_cast<button_type>(button) != button_type::Left)
-            return false;
-
-        bool const process_pick = modifier == GLFW_MOD_CONTROL || modifier == GLFW_MOD_SHIFT;
-
-        int fid;
-        double const x = static_cast<double>(viewer.current_mouse_x);
-        double const y = viewer.core().viewport(3) - static_cast<double>(viewer.current_mouse_y);
-        picking_state.mouse_x = viewer.current_mouse_x;
-        picking_state.mouse_y = viewer.current_mouse_y;
-
-        Eigen::Vector3f bc{};
-
-        bool const hit = igl::unproject_onto_mesh(
-            Eigen::Vector2f(x, y),
-            viewer.core().view,
-            viewer.core().proj,
-            viewer.core().viewport,
-            model.positions(),
-            model.faces(),
-            fid,
-            bc);
-
-        if (!hit)
-            return false;
-
-        Eigen::Vector3i const face{
-            model.faces()(fid, 0),
-            model.faces()(fid, 1),
-            model.faces()(fid, 2)};
-        unsigned int closest_vertex = face(0);
-
-        if (bc(1) > bc(0) && bc(1) > bc(2))
-        {
-            closest_vertex = face(1);
-        }
-        else if (bc(2) > bc(0) && bc(2) > bc(1))
-        {
-            closest_vertex = face(2);
-        }
-
-        if (modifier == GLFW_MOD_CONTROL)
-        {
-            picking_state.is_picking = true;
-            picking_state.vertex     = closest_vertex;
-        }
-        if (modifier == GLFW_MOD_SHIFT)
-        {
-            model.toggle_fixed(closest_vertex);
-        }
-
-        return process_pick;
-    };
+    viewer.callback_mouse_down = ui::mouse_down_handler_t{is_model_ready, &picking_state, &model};
 
     viewer.callback_mouse_move =
-        [&](igl::opengl::glfw::Viewer& viewer, int button, int modifier) -> bool {
-        if (!is_model_ready())
-            return false;
-
-        if (!picking_state.is_picking)
-            return false;
-
-        double const x1 = static_cast<double>(picking_state.mouse_x);
-        double const y1 = viewer.core().viewport(3) - static_cast<double>(picking_state.mouse_y);
-
-        double const x2 = static_cast<double>(viewer.current_mouse_x);
-        double const y2 = viewer.core().viewport(3) - static_cast<double>(viewer.current_mouse_y);
-
-        Eigen::Vector3d const p1 = igl::unproject(
-                                       Eigen::Vector3f(x1, y1, .5f),
-                                       viewer.core().view,
-                                       viewer.core().proj,
-                                       viewer.core().viewport)
-                                       .cast<double>();
-
-        Eigen::Vector3d const p2 = igl::unproject(
-                                       Eigen::Vector3f(x2, y2, .5f),
-                                       viewer.core().view,
-                                       viewer.core().proj,
-                                       viewer.core().viewport)
-                                       .cast<double>();
-
-        Eigen::Vector3d const direction = (p2 - p1).normalized();
-
-        fext.row(picking_state.vertex) =
-            direction.transpose() * static_cast<double>(picking_state.force);
-
-        viewer.data().add_points(
-            model.positions().row(picking_state.vertex),
-            Eigen::RowVector3d(1., 0., 0.));
-
-        picking_state.mouse_x = viewer.current_mouse_x;
-        picking_state.mouse_y = viewer.current_mouse_y;
-
-        return true;
-    };
+        ui::mouse_move_handler_t{is_model_ready, &picking_state, &model, &fext};
 
     viewer.callback_mouse_up =
         [&](igl::opengl::glfw::Viewer& viewer, int button, int modifier) -> bool {
@@ -200,6 +51,12 @@ int main(int argc, char** argv)
             picking_state.is_picking = false;
 
         return false;
+    };
+
+    auto const rescale = [](Eigen::MatrixXd& V) {
+        Eigen::RowVector3d v_mean = V.colwise().mean();
+        V.rowwise() -= v_mean;
+        V.array() /= V.maxCoeff() - V.minCoeff();
     };
 
     menu.callback_draw_viewer_window = [&]() {
@@ -221,12 +78,7 @@ int main(int argc, char** argv)
                     Eigen::MatrixXi F;
                     if (igl::read_triangle_mesh(mesh.string(), V, F))
                     {
-                        Eigen::RowVector3d vbox_mean = Vbox.colwise().mean();
-                        Eigen::RowVector3d v_mean    = V.colwise().mean();
-                        Vbox.rowwise() -= vbox_mean;
-                        V.rowwise() -= v_mean;
-                        V.rowwise() += Eigen::RowVector3d(0., .15, 0.);
-
+                        rescale(V);
                         model = pbd::deformable_mesh_t{V, F, F};
 
                         fext.resizeLike(model.positions());
@@ -255,12 +107,7 @@ int main(int argc, char** argv)
                     Eigen::MatrixXi T, F;
                     if (igl::readMESH(mesh.string(), V, T, F))
                     {
-                        Eigen::RowVector3d vbox_mean = Vbox.colwise().mean();
-                        Eigen::RowVector3d v_mean    = V.colwise().mean();
-                        Vbox.rowwise() -= vbox_mean;
-                        V.rowwise() -= v_mean;
-                        V.array() /= V.maxCoeff() - V.minCoeff();
-
+                        rescale(V);
                         model = pbd::deformable_mesh_t{V, F, T};
 
                         fext.resizeLike(model.positions());
@@ -321,26 +168,60 @@ int main(int argc, char** argv)
         {
             if (ImGui::TreeNode("Constraints"))
             {
-                if (ImGui::Button("Constrain Edge Length", ImVec2((w - p) / 2.f, 0)))
+                static std::array<bool, 3u> is_constraint_type_active;
+                if (ImGui::TreeNode("Edge length"))
                 {
-                    model.constrain_edge_lengths();
+                    ImGui::Checkbox("Active##EdgeLength", &is_constraint_type_active[0]);
+                    ImGui::TreePop();
                 }
-                if (ImGui::Button("Constrain Tet Volume", ImVec2((w - p) / 2.f, 0)))
+                if (ImGui::TreeNode("Tet signed_volume"))
                 {
-                    model.constrain_tetrahedron_volumes();
+                    ImGui::Checkbox("Active##TetVolume", &is_constraint_type_active[1]);
+                    ImGui::TreePop();
                 }
-                if (ImGui::Button("Reset##Constraints", ImVec2((w - p) / 2.f, 0)))
+                if (ImGui::TreeNode("FEM"))
+                {
+                    ImGui::InputFloat(
+                        "Young Modulus##FEM",
+                        &physics_params.young_modulus,
+                        0.01f,
+                        0.1f,
+                        "%.3f");
+                    ImGui::InputFloat(
+                        "Poisson Ratio##FEM",
+                        &physics_params.poisson_ratio,
+                        0.f,
+                        0.49f,
+                        "%.2f");
+                    ImGui::Checkbox("Active##FEM", &is_constraint_type_active[2]);
+                    ImGui::TreePop();
+                }
+                if (ImGui::Button("Apply##Constraints", ImVec2((w - p) / 2.f, 0)))
                 {
                     model.constraints().clear();
+                    if (is_constraint_type_active[0])
+                    {
+                        model.constrain_edge_lengths();
+                    }
+                    if (is_constraint_type_active[1])
+                    {
+                        model.constrain_tetrahedron_volumes();
+                    }
+                    if (is_constraint_type_active[2])
+                    {
+                        model.constrain_green_strain_elastic_potential(
+                            physics_params.young_modulus,
+                            physics_params.poisson_ratio);
+                    }
                 }
                 std::string const constraint_count = std::to_string(model.constraints().size());
                 ImGui::BulletText(std::string("Constraints: " + constraint_count).c_str());
                 ImGui::TreePop();
             }
-            ImGui::InputFloat("Timestep", &dt, 0.01f, 0.1f, "%.4f");
-            ImGui::InputInt("Solver iterations", &solver_iterations);
-            ImGui::InputInt("Solver substeps", &solver_substeps);
-            ImGui::Checkbox("Gravity", &is_gravity_active);
+            ImGui::InputFloat("Timestep", &physics_params.dt, 0.01f, 0.1f, "%.4f");
+            ImGui::InputInt("Solver iterations", &physics_params.solver_iterations);
+            ImGui::InputInt("Solver substeps", &physics_params.solver_substeps);
+            ImGui::Checkbox("Gravity", &physics_params.is_gravity_active);
             ImGui::Checkbox("Simulate", &viewer.core().is_animating);
         }
 
@@ -366,42 +247,9 @@ int main(int argc, char** argv)
         ImGui::End();
     };
 
-    auto const draw_fixed_points = [&]() {
-        for (auto i = 0u; i < model.positions().rows(); ++i)
-        {
-            if (!model.is_fixed(i))
-                continue;
+    viewer.callback_pre_draw =
+        ui::pre_draw_handler_t{is_model_ready, &physics_params, &model, &fext};
 
-            viewer.data().add_points(model.positions().row(i), Eigen::RowVector3d{1., 0., 0.});
-        }
-    };
-
-    viewer.callback_pre_draw = [&](igl::opengl::glfw::Viewer& viewer) -> bool {
-        if (!is_model_ready())
-            return false;
-
-        if (viewer.core().is_animating)
-        {
-            fext.col(1).array() -= is_gravity_active ? 9.81 : 0.;
-            pbd::solve(
-                model,
-                fext,
-                dt,
-                static_cast<std::uint32_t>(solver_iterations),
-                static_cast<std::uint32_t>(solver_substeps));
-            fext.setZero();
-            viewer.data().clear();
-            viewer.data().set_mesh(model.positions(), model.faces());
-        }
-
-        draw_fixed_points();
-        // draw_floor_points();
-        // draw_floor_edges();
-
-        return false; // do not return from drawing loop
-    };
-
-    viewer.core().rotation_type == igl::opengl::ViewerCore::RotationType::ROTATION_TYPE_TRACKBALL;
     viewer.launch();
 
     return 0;

@@ -1,8 +1,9 @@
 #ifndef PBD_DEFORMABLE_MESH_H
 #define PBD_DEFORMABLE_MESH_H
 
+#include "constraint.h"
+
 #include <Eigen/Core>
-#include <constraint.h>
 
 namespace pbd {
 
@@ -14,6 +15,7 @@ class deformable_mesh_t
     using faces_type       = Eigen::MatrixXi;
     using elements_type    = Eigen::MatrixXi;
     using constraints_type = std::vector<std::unique_ptr<constraint_t>>;
+    using scalar_type      = typename constraint_t::scalar_type;
 
   public:
     deformable_mesh_t() = default;
@@ -74,6 +76,8 @@ class deformable_mesh_t
     void tetrahedralize(Eigen::MatrixXd const& V, Eigen::MatrixXi const& F);
     void constrain_edge_lengths();
     void constrain_tetrahedron_volumes();
+    void
+    constrain_green_strain_elastic_potential(scalar_type young_modulus, scalar_type poisson_ratio);
 
   private:
     positions_type p_;             ///< Positions

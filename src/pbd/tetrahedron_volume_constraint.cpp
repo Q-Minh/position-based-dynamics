@@ -1,7 +1,6 @@
-#include "tetrahedron_volume_constraint.h"
+#include "pbd/tetrahedron_volume_constraint.h"
 
 #include <Eigen/Dense>
-#include <iostream>
 
 namespace pbd {
 

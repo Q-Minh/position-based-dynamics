@@ -1,4 +1,4 @@
-#include "solve.h"
+#include "pbd/solve.h"
 
 namespace pbd {
 
