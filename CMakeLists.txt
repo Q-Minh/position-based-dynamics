@@ -56,6 +56,7 @@ PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/constraint.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/deformable_mesh.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/edge_length_constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/get_simple_bar_model.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/get_simple_cloth_model.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/green_strain_elastic_constraint.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/solve.h

@@ -1,5 +1,7 @@
 #include "pbd/deformable_mesh.h"
 #include "pbd/edge_length_constraint.h"
+#include "pbd/get_simple_bar_model.h"
+#include "pbd/get_simple_cloth_model.h"
 #include "pbd/solve.h"
 #include "ui/mouse_down_handler.h"
 #include "ui/mouse_move_handler.h"
@@ -59,6 +61,23 @@ int main(int argc, char** argv)
         V.array() /= V.maxCoeff() - V.minCoeff();
     };
 
+    auto const reset_simulation_model = [&](Eigen::MatrixXd& V,
+                                            Eigen::MatrixXi& F,
+                                            Eigen::MatrixXi& T,
+                                            bool should_rescale = false) {
+        if (should_rescale)
+            rescale(V);
+
+        model = pbd::deformable_mesh_t{V, F, T};
+
+        fext.resizeLike(model.positions());
+        fext.setZero();
+
+        viewer.data().clear();
+        viewer.data().set_mesh(model.positions(), model.faces());
+        viewer.core().align_camera_center(model.positions());
+    };
+
     menu.callback_draw_viewer_window = [&]() {
         ImGui::SetNextWindowSize(ImVec2(300.0f, 480.0f), ImGuiSetCond_FirstUseEver);
         ImGui::Begin("Position Based Dynamics");
@@ -78,15 +97,7 @@ int main(int argc, char** argv)
                     Eigen::MatrixXi F;
                     if (igl::read_triangle_mesh(mesh.string(), V, F))
                     {
-                        rescale(V);
-                        model = pbd::deformable_mesh_t{V, F, F};
-
-                        fext.resizeLike(model.positions());
-                        fext.setZero();
-
-                        viewer.data().clear();
-                        viewer.data().set_mesh(model.positions(), model.faces());
-                        viewer.core().align_camera_center(model.positions());
+                        reset_simulation_model(V, F, F, true);
                     }
                 }
             }
@@ -107,15 +118,7 @@ int main(int argc, char** argv)
                     Eigen::MatrixXi T, F;
                     if (igl::readMESH(mesh.string(), V, T, F))
                     {
-                        rescale(V);
-                        model = pbd::deformable_mesh_t{V, F, T};
-
-                        fext.resizeLike(model.positions());
-                        fext.setZero();
-
-                        viewer.data().clear();
-                        viewer.data().set_mesh(model.positions(), model.faces());
-                        viewer.core().align_camera_center(model.positions());
+                        reset_simulation_model(V, F, T, true);
                     }
                 }
             }
@@ -129,6 +132,45 @@ int main(int argc, char** argv)
         }
         if (ImGui::CollapsingHeader("Geometry", ImGuiTreeNodeFlags_DefaultOpen))
         {
+            if (ImGui::TreeNode("Bar"))
+            {
+                static int bar_width  = 12;
+                static int bar_height = 4;
+                static int bar_depth  = 4;
+
+                ImGui::InputInt("width##Bar", &bar_width);
+                ImGui::InputInt("height##Bar", &bar_height);
+                ImGui::InputInt("depth##Bar", &bar_depth);
+
+                if (ImGui::Button("Compute##Bar", ImVec2((w - p) / 2.f, 0)))
+                {
+                    auto [V, T, F] = geometry::get_simple_bar_model(
+                        static_cast<std::size_t>(bar_width),
+                        static_cast<std::size_t>(bar_height),
+                        static_cast<std::size_t>(bar_depth));
+
+                    reset_simulation_model(V, F, T, true);
+                }
+
+                ImGui::TreePop();
+            }
+            if (ImGui::TreeNode("Cloth"))
+            {
+                static int cloth_width  = 20;
+                static int cloth_height = 20;
+
+                ImGui::InputInt("width##Cloth", &cloth_width);
+                ImGui::InputInt("height##Cloth", &cloth_height);
+
+                if (ImGui::Button("Compute##Bar", ImVec2((w - p) / 2.f, 0)))
+                {
+                    auto [V, F] = geometry::get_simple_cloth_model(cloth_width, cloth_height);
+
+                    reset_simulation_model(V, F, F, true);
+                }
+
+                ImGui::TreePop();
+            }
             if (ImGui::TreeNode("Decimation"))
             {
                 static int max_facet_count = 30'000;
@@ -139,10 +181,7 @@ int main(int argc, char** argv)
                     Eigen::MatrixXi F;
                     Eigen::VectorXi J;
                     igl::decimate(model.positions(), model.faces(), max_facet_count, V, F, J);
-                    model = pbd::deformable_mesh_t{V, F, F};
-                    viewer.data().clear();
-                    viewer.data().set_mesh(model.positions(), model.faces());
-                    viewer.core().align_camera_center(model.positions());
+                    reset_simulation_model(V, F, F);
                 }
                 ImGui::TreePop();
             }

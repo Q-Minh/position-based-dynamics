@@ -19,8 +19,9 @@ user interaction.
 - element deletion
 - swept surface
 
+![Bar simulation example](./doc/bar-fem-pbd.gif)
 ![Cloth simulation example](./doc/pbd-simple-cloth-example.gif)
-![Soft body simulation example](./doc/bunny-pbd-edge-length.gif)
+![Bunny geometric simulation example](./doc/bunny-pbd-edge-length.gif)
 
 ## Dependencies
 
