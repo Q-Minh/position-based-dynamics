@@ -1,9 +1,9 @@
 #ifndef PBD_GREEN_STRAIN_ELASTIC_CONSTRAINT_H
 #define PBD_GREEN_STRAIN_ELASTIC_CONSTRAINT_H
 
-#include "pbd/constraint.h"
+#include "xpbd/constraint.h"
 
-namespace pbd {
+namespace xpbd {
 
 class green_strain_elastic_constraint_t : public constraint_t
 {
@@ -22,7 +22,7 @@ class green_strain_elastic_constraint_t : public constraint_t
         positions_type const& p,
         scalar_type young_modulus,
         scalar_type poisson_ratio);
-    
+
     virtual void project(positions_type& p, masses_type const& m) const override;
 
   protected:
@@ -36,6 +36,6 @@ class green_strain_elastic_constraint_t : public constraint_t
     scalar_type lambda_;
 };
 
-} // namespace pbd
+} // namespace xpbd
 
 #endif // PBD_GREEN_STRAIN_ELASTIC_CONSTRAINT_H

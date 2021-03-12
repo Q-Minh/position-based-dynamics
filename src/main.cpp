@@ -1,8 +1,8 @@
-#include "pbd/deformable_mesh.h"
-#include "pbd/edge_length_constraint.h"
-#include "pbd/get_simple_bar_model.h"
-#include "pbd/get_simple_cloth_model.h"
-#include "pbd/solve.h"
+#include "xpbd/deformable_mesh.h"
+#include "xpbd/edge_length_constraint.h"
+#include "geometry/get_simple_bar_model.h"
+#include "geometry/get_simple_cloth_model.h"
+#include "solver/solve.h"
 #include "ui/mouse_down_handler.h"
 #include "ui/mouse_move_handler.h"
 #include "ui/physics_params.h"
@@ -14,7 +14,6 @@
 #include <igl/decimate.h>
 #include <igl/file_dialog_open.h>
 #include <igl/file_dialog_save.h>
-#include <igl/marching_tets.h>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/opengl/glfw/imgui/ImGuiHelpers.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
@@ -25,7 +24,7 @@
 
 int main(int argc, char** argv)
 {
-    pbd::deformable_mesh_t model{};
+    xpbd::deformable_mesh_t model{};
     Eigen::MatrixX3d fext;
     ui::picking_state_t picking_state{};
     ui::physics_params_t physics_params{};
@@ -68,7 +67,7 @@ int main(int argc, char** argv)
         if (should_rescale)
             rescale(V);
 
-        model = pbd::deformable_mesh_t{V, F, T};
+        model = xpbd::deformable_mesh_t{V, F, T};
 
         fext.resizeLike(model.positions());
         fext.setZero();

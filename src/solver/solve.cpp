@@ -1,9 +1,9 @@
-#include "pbd/solve.h"
+#include "solver/solve.h"
 
-namespace pbd {
+namespace solver {
 
 void solve(
-    deformable_mesh_t& model,
+    xpbd::deformable_mesh_t& model,
     Eigen::MatrixX3d const& fext,
     double timestep,
     std::uint32_t iterations,
@@ -47,4 +47,4 @@ void solve(
     }
 }
 
-} // namespace pbd
+} // namespace solver

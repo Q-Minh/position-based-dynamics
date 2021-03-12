@@ -3,7 +3,7 @@
 
 #include "constraint.h"
 
-namespace pbd {
+namespace xpbd {
 
 class tetrahedron_volume_constraint_t : public constraint_t
 {
@@ -31,6 +31,6 @@ class tetrahedron_volume_constraint_t : public constraint_t
     scalar_type V0_;
 };
 
-} // namespace pbd
+} // namespace xpbd
 
 #endif // PBD_TETRAHEDRON_VOLUME_CONSTRAINT_H

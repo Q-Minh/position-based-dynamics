@@ -1,8 +1,8 @@
-#include "pbd/deformable_mesh.h"
+#include "xpbd/deformable_mesh.h"
 
-#include "pbd/edge_length_constraint.h"
-#include "pbd/green_strain_elastic_constraint.h"
-#include "pbd/tetrahedron_volume_constraint.h"
+#include "xpbd/edge_length_constraint.h"
+#include "xpbd/green_strain_elastic_constraint.h"
+#include "xpbd/tetrahedron_volume_constraint.h"
 
 #include <array>
 #include <igl/barycenter.h>
@@ -11,10 +11,8 @@
 #include <igl/copyleft/tetgen/tetrahedralize.h>
 #include <igl/edges.h>
 #include <igl/winding_number.h>
-#include <iostream>
-#include <unordered_map>
 
-namespace pbd {
+namespace xpbd {
 
 void deformable_mesh_t::tetrahedralize(Eigen::MatrixXd const& V, Eigen::MatrixXi const& F)
 {
@@ -105,7 +103,7 @@ void deformable_mesh_t::constrain_green_strain_elastic_potential(
     scalar_type young_modulus,
     scalar_type poisson_ratio)
 {
-    auto const& positions = this->positions();
+    auto const& positions = p0_;
     auto const& elements  = this->elements();
 
     for (auto i = 0u; i < elements.rows(); ++i)
@@ -125,4 +123,4 @@ void deformable_mesh_t::constrain_green_strain_elastic_potential(
     }
 }
 
-} // namespace pbd
+} // namespace xpbd

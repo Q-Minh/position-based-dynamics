@@ -5,10 +5,11 @@
 
 #include <Eigen/Core>
 
-namespace pbd {
+namespace xpbd {
 
 class deformable_mesh_t
 {
+  public:
     using positions_type   = Eigen::MatrixXd;
     using masses_type      = Eigen::VectorXd;
     using velocities_type  = Eigen::MatrixX3d;
@@ -25,7 +26,8 @@ class deformable_mesh_t
         faces_type const& faces,
         elements_type const& elements,
         masses_type const& masses)
-        : p_(positions),
+        : p0_(positions),
+          p_(positions),
           F_(faces),
           E_(elements),
           m_(masses),
@@ -39,7 +41,8 @@ class deformable_mesh_t
         positions_type const& positions,
         faces_type const& faces,
         elements_type const& elements = elements_type{})
-        : p_(positions),
+        : p0_(positions),
+          p_(positions),
           F_(faces),
           E_(elements),
           m_(positions.rows()),
@@ -79,7 +82,11 @@ class deformable_mesh_t
     void
     constrain_green_strain_elastic_potential(scalar_type young_modulus, scalar_type poisson_ratio);
 
+protected:
+    positions_type const& p0() const { return p0_; }
+
   private:
+    positions_type p0_;            ///< Rest positions
     positions_type p_;             ///< Positions
     faces_type F_;                 ///< Faces
     elements_type E_;              ///< Elements
@@ -89,6 +96,6 @@ class deformable_mesh_t
     std::vector<bool> fixed_;      ///< Flags fixed positions
 };
 
-} // namespace pbd
+} // namespace xpbd
 
 #endif // PBD_DEFORMABLE_MESH_H

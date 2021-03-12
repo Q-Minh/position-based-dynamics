@@ -1,6 +1,6 @@
-#include "pbd/edge_length_constraint.h"
+#include "xpbd/edge_length_constraint.h"
 
-namespace pbd {
+namespace xpbd {
 
 edge_length_constraint_t::scalar_type
 edge_length_constraint_t::evaluate(positions_type const& p, masses_type const& M) const
@@ -29,4 +29,4 @@ void edge_length_constraint_t::project(positions_type& p, masses_type const& M) 
     p.row(v1) += w1 / (w0 + w1) * C * n;
 }
 
-} // namespace pbd
+} // namespace xpbd

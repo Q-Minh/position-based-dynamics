@@ -3,7 +3,7 @@
 
 #include "constraint.h"
 
-namespace pbd {
+namespace xpbd {
 
 class edge_length_constraint_t : public constraint_t
 {
@@ -34,6 +34,6 @@ class edge_length_constraint_t : public constraint_t
     scalar_type d_; ///< rest length
 };
 
-} // namespace pbd
+} // namespace xpbd
 
 #endif // PBD_EDGE_LENGTH_CONSTRAINT_H

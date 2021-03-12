@@ -1,8 +1,8 @@
-#include "pbd/tetrahedron_volume_constraint.h"
+#include "xpbd/tetrahedron_volume_constraint.h"
 
 #include <Eigen/Dense>
 
-namespace pbd {
+namespace xpbd {
 
 tetrahedron_volume_constraint_t::tetrahedron_volume_constraint_t(
     std::initializer_list<index_type> indices,
@@ -69,4 +69,4 @@ void tetrahedron_volume_constraint_t::project(positions_type& p, masses_type con
     p.row(v3) += -s * w3 * grad3;
 }
 
-} // namespace pbd
+} // namespace xpbd

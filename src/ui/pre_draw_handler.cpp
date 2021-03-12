@@ -10,7 +10,7 @@ bool pre_draw_handler_t::operator()(igl::opengl::glfw::Viewer& viewer)
     if (viewer.core().is_animating)
     {
         fext->col(1).array() -= physics_params->is_gravity_active ? 9.81 : 0.;
-        pbd::solve(
+        solver::solve(
             *model,
             *fext,
             physics_params->dt,

@@ -41,27 +41,41 @@ PRIVATE
 
 target_sources(pbd
 PRIVATE
+    # source files
+
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/pbd/deformable_mesh.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/pbd/edge_length_constraint.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/pbd/green_strain_elastic_constraint.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/pbd/solve.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/pbd/tetrahedron_volume_constraint.cpp
+    # xpbd
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/deformable_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/edge_length_constraint.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/green_strain_elastic_constraint.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/tetrahedron_volume_constraint.cpp
 
+    # solver
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/solver/solve.cpp
+
+    # ui
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/mouse_down_handler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/mouse_move_handler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/pre_draw_handler.cpp
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/constraint.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/deformable_mesh.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/edge_length_constraint.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/get_simple_bar_model.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/get_simple_cloth_model.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/green_strain_elastic_constraint.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/solve.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/pbd/tetrahedron_volume_constraint.h
+    # header files
 
+    # geometry
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/geometry/get_simple_bar_model.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/geometry/get_simple_cloth_model.h
+
+    # xpbd
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/xpbd/constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/xpbd/deformable_mesh.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/xpbd/edge_length_constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/xpbd/green_strain_elastic_constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/xpbd/tetrahedron_volume_constraint.h
+
+    # solver
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/solver/solve.h
+
+    # ui
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/mouse_down_handler.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/mouse_move_handler.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/ui/physics_params.h

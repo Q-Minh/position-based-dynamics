@@ -4,7 +4,7 @@
 #include <Eigen/Core>
 #include <vector>
 
-namespace pbd {
+namespace xpbd {
 
 class constraint_t
 {
@@ -18,13 +18,13 @@ class constraint_t
   public:
     constraint_t(std::initializer_list<index_type> indices) : indices_(indices) {}
 
-    virtual void project(positions_type& V, masses_type const& M) const               = 0;
+    virtual void project(positions_type& V, masses_type const& M) const = 0;
     std::vector<index_type> const& indices() const { return indices_; }
 
   private:
     std::vector<index_type> indices_;
 };
 
-} // namespace pbd
+} // namespace xpbd
 
 #endif // PBD_CONSTRAINT_H
