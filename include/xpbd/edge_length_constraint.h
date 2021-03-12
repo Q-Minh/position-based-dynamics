@@ -17,8 +17,11 @@ class edge_length_constraint_t : public constraint_t
     using gradient_type  = typename base_type::gradient_type;
 
   public:
-    edge_length_constraint_t(std::initializer_list<index_type> indices, positions_type const& p)
-        : base_type(indices), d_(0.)
+    edge_length_constraint_t(
+        std::initializer_list<index_type> indices,
+        positions_type const& p,
+        scalar_type const alpha = 0.0)
+        : base_type(indices, alpha), d_(0.)
     {
         assert(indices.size() == 2u);
         auto const e0 = this->indices()[0];
@@ -28,7 +31,9 @@ class edge_length_constraint_t : public constraint_t
     }
 
     scalar_type evaluate(positions_type const& V, masses_type const& M) const;
-    virtual void project(positions_type& V, masses_type const& M) const override;
+    virtual void
+    project(positions_type& V, masses_type const& M, scalar_type& lagrange, scalar_type const dt)
+        const override;
 
   private:
     scalar_type d_; ///< rest length

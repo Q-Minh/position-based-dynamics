@@ -7,9 +7,18 @@ bool pre_draw_handler_t::operator()(igl::opengl::glfw::Viewer& viewer)
     if (!is_model_ready())
         return false;
 
+    for (auto i = 0; i < model->mass().rows(); ++i)
+    {
+        if (model->is_fixed(i))
+            continue;
+
+        model->mass()(i) = static_cast<double>(physics_params->mass_per_particle);
+    }
+
     if (viewer.core().is_animating)
     {
         fext->col(1).array() -= physics_params->is_gravity_active ? 9.81 : 0.;
+
         solver::solve(
             *model,
             *fext,

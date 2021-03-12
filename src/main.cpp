@@ -1,5 +1,3 @@
-#include "xpbd/deformable_mesh.h"
-#include "xpbd/edge_length_constraint.h"
 #include "geometry/get_simple_bar_model.h"
 #include "geometry/get_simple_cloth_model.h"
 #include "solver/solve.h"
@@ -8,6 +6,8 @@
 #include "ui/physics_params.h"
 #include "ui/picking_state.h"
 #include "ui/pre_draw_handler.h"
+#include "xpbd/deformable_mesh.h"
+#include "xpbd/edge_length_constraint.h"
 
 #include <array>
 #include <filesystem>
@@ -41,7 +41,8 @@ int main(int argc, char** argv)
     igl::opengl::glfw::imgui::ImGuiMenu menu;
     viewer.plugins.push_back(&menu);
 
-    viewer.callback_mouse_down = ui::mouse_down_handler_t{is_model_ready, &picking_state, &model};
+    viewer.callback_mouse_down =
+        ui::mouse_down_handler_t{is_model_ready, &picking_state, &model, &physics_params};
 
     viewer.callback_mouse_move =
         ui::mouse_move_handler_t{is_model_ready, &picking_state, &model, &fext};
@@ -234,22 +235,25 @@ int main(int argc, char** argv)
                     ImGui::Checkbox("Active##FEM", &is_constraint_type_active[2]);
                     ImGui::TreePop();
                 }
+
                 if (ImGui::Button("Apply##Constraints", ImVec2((w - p) / 2.f, 0)))
                 {
                     model.constraints().clear();
                     if (is_constraint_type_active[0])
                     {
-                        model.constrain_edge_lengths();
+                        model.constrain_edge_lengths(static_cast<double>(physics_params.alpha));
                     }
                     if (is_constraint_type_active[1])
                     {
-                        model.constrain_tetrahedron_volumes();
+                        model.constrain_tetrahedron_volumes(
+                            static_cast<double>(physics_params.alpha));
                     }
                     if (is_constraint_type_active[2])
                     {
                         model.constrain_green_strain_elastic_potential(
                             physics_params.young_modulus,
-                            physics_params.poisson_ratio);
+                            physics_params.poisson_ratio,
+                            static_cast<double>(physics_params.alpha));
                     }
                 }
                 std::string const constraint_count = std::to_string(model.constraints().size());
@@ -259,6 +263,8 @@ int main(int argc, char** argv)
             ImGui::InputFloat("Timestep", &physics_params.dt, 0.01f, 0.1f, "%.4f");
             ImGui::InputInt("Solver iterations", &physics_params.solver_iterations);
             ImGui::InputInt("Solver substeps", &physics_params.solver_substeps);
+            ImGui::InputFloat("compliance", &physics_params.alpha, 0.00000001f, 0.01, "%.8f");
+            ImGui::InputFloat("mass per particle", &physics_params.mass_per_particle, 1, 10, 1);
             ImGui::Checkbox("Gravity", &physics_params.is_gravity_active);
             ImGui::Checkbox("Simulate", &viewer.core().is_animating);
         }

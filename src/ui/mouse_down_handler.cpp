@@ -56,7 +56,7 @@ bool mouse_down_handler_t::operator()(igl::opengl::glfw::Viewer& viewer, int but
     }
     if (modifier == GLFW_MOD_SHIFT)
     {
-        model->toggle_fixed(closest_vertex);
+        model->toggle_fixed(closest_vertex, physics_params->mass_per_particle);
     }
 
     return process_pick;

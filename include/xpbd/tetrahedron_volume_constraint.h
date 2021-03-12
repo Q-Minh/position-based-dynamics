@@ -19,10 +19,13 @@ class tetrahedron_volume_constraint_t : public constraint_t
   public:
     tetrahedron_volume_constraint_t(
         std::initializer_list<index_type> indices,
-        positions_type const& p);
+        positions_type const& p,
+        scalar_type const alpha = 0.0);
 
     scalar_type evaluate(positions_type const& V, masses_type const& M) const;
-    virtual void project(positions_type& V, masses_type const& M) const override;
+    virtual void
+    project(positions_type& V, masses_type const& M, scalar_type& lagrange, scalar_type const dt)
+        const override;
 
   protected:
     scalar_type volume(positions_type const& V) const;

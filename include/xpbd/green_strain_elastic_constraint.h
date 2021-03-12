@@ -21,13 +21,15 @@ class green_strain_elastic_constraint_t : public constraint_t
         std::initializer_list<index_type> indices,
         positions_type const& p,
         scalar_type young_modulus,
-        scalar_type poisson_ratio);
+        scalar_type poisson_ratio,
+        scalar_type const alpha = 0.0);
 
-    virtual void project(positions_type& p, masses_type const& m) const override;
+    virtual void
+    project(positions_type& p, masses_type const& m, scalar_type& lagrange, scalar_type const dt)
+        const override;
 
   protected:
     scalar_type signed_volume(positions_type const& V) const;
-    void project_inverted(positions_type& p, masses_type const& m) const;
 
   private:
     scalar_type V0_;

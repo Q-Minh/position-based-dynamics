@@ -4,6 +4,7 @@
 #include "constraint.h"
 
 #include <Eigen/Core>
+#include <numeric>
 
 namespace xpbd {
 
@@ -55,9 +56,24 @@ class deformable_mesh_t
     }
 
     bool is_fixed(int i) const { return fixed_[i]; }
-    void fix(int i) { fixed_[i] = true; }
-    void unfix(int i) { fixed_[i] = false; }
-    void toggle_fixed(int i) { fixed_[i] = !fixed_[i]; }
+    void fix(int i)
+    {
+        fixed_[i] = true;
+        m_(i)     = std::numeric_limits<scalar_type>::max();
+    }
+    void unfix(int i, scalar_type const mass)
+    {
+        fixed_[i] = false;
+        m_(i)     = mass;
+    }
+    void toggle_fixed(int i, scalar_type const mass_when_unfixed = 1.0)
+    {
+        fixed_[i] = !fixed_[i];
+        if (fixed_[i])
+            m_(i) = std::numeric_limits<scalar_type>::max();
+        else
+            m_(i) = mass_when_unfixed;
+    }
 
     positions_type const& positions() const { return p_; }
     faces_type const& faces() const { return F_; }
@@ -77,12 +93,14 @@ class deformable_mesh_t
 
     void immobilize() { v_.setZero(); }
     void tetrahedralize(Eigen::MatrixXd const& V, Eigen::MatrixXi const& F);
-    void constrain_edge_lengths();
-    void constrain_tetrahedron_volumes();
-    void
-    constrain_green_strain_elastic_potential(scalar_type young_modulus, scalar_type poisson_ratio);
+    void constrain_edge_lengths(scalar_type const compliance = 0.0);
+    void constrain_tetrahedron_volumes(scalar_type const compliance = 0.0);
+    void constrain_green_strain_elastic_potential(
+        scalar_type young_modulus,
+        scalar_type poisson_ratio,
+        scalar_type const compliance = 0.0);
 
-protected:
+  protected:
     positions_type const& p0() const { return p0_; }
 
   private:
@@ -90,7 +108,7 @@ protected:
     positions_type p_;             ///< Positions
     faces_type F_;                 ///< Faces
     elements_type E_;              ///< Elements
-    masses_type m_;                ///< Per-vertex mass
+    masses_type m_;                ///< Per-vertex mass_when_unfixed
     velocities_type v_;            ///< Per-vertex velocity
     constraints_type constraints_; ///< PBD constraints
     std::vector<bool> fixed_;      ///< Flags fixed positions

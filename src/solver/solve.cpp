@@ -27,18 +27,18 @@ void solve(
         // generate collision constraints here ...
 
         // sequential gauss seidel type solve
+        Eigen::VectorXd lagrange_multipliers;
+        lagrange_multipliers.resize(model.constraints().size());
+        lagrange_multipliers.setZero();
         for (auto n = 0u; n < num_iterations; ++n)
         {
             for (auto const& constraint : model.constraints())
-                constraint->project(p, m);
+                constraint->project(p, m, lagrange_multipliers(n), dt);
         }
 
         // update solution
         for (auto i = 0u; i < x.rows(); ++i)
         {
-            if (model.is_fixed(i))
-                continue;
-
             v.row(i) = (p.row(i) - x.row(i)) / dt;
             x.row(i) = p.row(i);
         }

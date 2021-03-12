@@ -3,6 +3,7 @@
 
 #include "xpbd/deformable_mesh.h"
 #include "picking_state.h"
+#include "physics_params.h"
 
 #include <GLFW/glfw3.h>
 #include <igl/opengl/glfw/Viewer.h>
@@ -15,12 +16,17 @@ struct mouse_down_handler_t
     std::function<bool()> is_model_ready;
     picking_state_t* picking_state;
     xpbd::deformable_mesh_t* model;
+    physics_params_t* physics_params;
 
     mouse_down_handler_t(
         std::function<bool()> is_model_ready,
         picking_state_t* picking_state,
-        xpbd::deformable_mesh_t* model)
-        : is_model_ready(is_model_ready), picking_state(picking_state), model(model)
+        xpbd::deformable_mesh_t* model, 
+        physics_params_t* physics_params)
+        : is_model_ready(is_model_ready),
+          picking_state(picking_state),
+          model(model),
+          physics_params(physics_params)
     {
     }
 
