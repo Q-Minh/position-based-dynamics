@@ -55,11 +55,8 @@ void deformable_mesh_t::tetrahedralize(Eigen::MatrixXd const& V, Eigen::MatrixXi
 void deformable_mesh_t::constrain_edge_lengths(scalar_type const compliance)
 {
     auto const& positions = this->p0();
-    auto const& faces     = this->faces();
     auto const& elements  = this->elements();
 
-    using edges_type = std::unordered_multimap<int, std::pair<int, bool>>;
-    edges_type edges;
     Eigen::MatrixXi E;
     igl::edges(elements, E);
 

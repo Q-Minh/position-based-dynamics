@@ -238,6 +238,7 @@ int main(int argc, char** argv)
 
                 if (ImGui::Button("Apply##Constraints", ImVec2((w - p) / 2.f, 0)))
                 {
+                    model.immobilize();
                     model.constraints().clear();
                     if (is_constraint_type_active[0])
                     {
