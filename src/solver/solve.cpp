@@ -11,6 +11,9 @@ void solve(
 {
     auto const num_iterations = iterations / substeps;
     double dt                 = timestep / static_cast<double>(substeps);
+    auto const& constraints   = model.constraints();
+    auto const J              = constraints.size();
+    std::vector<double> lagrange_multipliers(J, 0.);
 
     for (auto s = 0u; s < substeps; ++s)
     {
@@ -27,13 +30,14 @@ void solve(
         // generate collision constraints here ...
 
         // sequential gauss seidel type solve
-        Eigen::VectorXd lagrange_multipliers;
-        lagrange_multipliers.resize(model.constraints().size());
-        lagrange_multipliers.setZero();
+        std::fill(lagrange_multipliers.begin(), lagrange_multipliers.end(), 0.0);
         for (auto n = 0u; n < num_iterations; ++n)
         {
-            for (auto const& constraint : model.constraints())
-                constraint->project(p, m, lagrange_multipliers(n), dt);
+            for (auto j = 0u; j < J; ++j)
+            {
+                auto const& constraint = constraints[j];
+                constraint->project(p, m, lagrange_multipliers[j], dt);
+            }
         }
 
         // update solution
