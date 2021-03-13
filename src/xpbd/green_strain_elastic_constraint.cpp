@@ -144,7 +144,7 @@ void green_strain_elastic_constraint_t::project(
 
     // H is the negative gradient of the elastic potential
     scalar_type const V0     = std::abs(V0_);
-    Eigen::Matrix3d const H  = -V0_ * Piola * DmInv_.transpose();
+    Eigen::Matrix3d const H  = -V0 * Piola * DmInv_.transpose();
     Eigen::Vector3d const f1 = H.col(0);
     Eigen::Vector3d const f2 = H.col(1);
     Eigen::Vector3d const f3 = H.col(2);
@@ -161,7 +161,7 @@ void green_strain_elastic_constraint_t::project(
     if (weighted_sum_of_gradients < epsilon)
         return;
 
-    scalar_type const C           = V0_ * psi;
+    scalar_type const C           = V0 * psi;
     scalar_type const alpha_tilde = alpha_ / (dt * dt);
     scalar_type const delta_lagrange =
         -(C + alpha_tilde * lagrange) / (weighted_sum_of_gradients + alpha_tilde);
