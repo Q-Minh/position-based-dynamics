@@ -207,7 +207,7 @@ int main(int argc, char** argv)
         {
             if (ImGui::TreeNode("Constraints"))
             {
-                static std::array<bool, 3u> is_constraint_type_active;
+                static std::array<bool, 4u> is_constraint_type_active;
                 if (ImGui::TreeNode("Edge length"))
                 {
                     ImGui::Checkbox("Active##EdgeLength", &is_constraint_type_active[0]);
@@ -223,16 +223,17 @@ int main(int argc, char** argv)
                     ImGui::InputFloat(
                         "Young Modulus##FEM",
                         &physics_params.young_modulus,
-                        0.01f,
-                        0.1f,
-                        "%.3f");
+                        10.f,
+                        1000.f,
+                        "%.0f");
                     ImGui::InputFloat(
                         "Poisson Ratio##FEM",
                         &physics_params.poisson_ratio,
                         0.f,
                         0.49f,
                         "%.2f");
-                    ImGui::Checkbox("Active##FEM", &is_constraint_type_active[2]);
+                    ImGui::Checkbox("Quadratic Green strain##FEM", &is_constraint_type_active[2]);
+                    ImGui::Checkbox("Neohookean elasticity##FEM", &is_constraint_type_active[3]);
                     ImGui::TreePop();
                 }
 
@@ -256,6 +257,13 @@ int main(int argc, char** argv)
                             physics_params.poisson_ratio,
                             static_cast<double>(physics_params.alpha));
                     }
+                    if (is_constraint_type_active[3])
+                    {
+                        model.constrain_neohookean_elasticity_potential(
+                            physics_params.young_modulus,
+                            physics_params.poisson_ratio,
+                            static_cast<double>(physics_params.alpha));
+                    }
                 }
                 std::string const constraint_count = std::to_string(model.constraints().size());
                 ImGui::BulletText(std::string("Constraints: " + constraint_count).c_str());
@@ -264,7 +272,7 @@ int main(int argc, char** argv)
             ImGui::InputFloat("Timestep", &physics_params.dt, 0.01f, 0.1f, "%.4f");
             ImGui::InputInt("Solver iterations", &physics_params.solver_iterations);
             ImGui::InputInt("Solver substeps", &physics_params.solver_substeps);
-            ImGui::InputFloat("compliance", &physics_params.alpha, 0.00000001f, 0.01, "%.8f");
+            ImGui::InputFloat("compliance", &physics_params.alpha, 0.00000001f, 0.01, "%.10f");
             ImGui::InputFloat("mass per particle", &physics_params.mass_per_particle, 1, 10, 1);
             ImGui::Checkbox("Gravity", &physics_params.is_gravity_active);
             ImGui::Checkbox("Simulate", &viewer.core().is_animating);

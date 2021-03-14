@@ -99,6 +99,10 @@ class deformable_mesh_t
         scalar_type young_modulus,
         scalar_type poisson_ratio,
         scalar_type const compliance = 0.0);
+    void constrain_neohookean_elasticity_potential(
+        scalar_type young_modulus,
+        scalar_type poisson_ratio,
+        scalar_type const compliance = 0.0);
 
   protected:
     positions_type const& p0() const { return p0_; }

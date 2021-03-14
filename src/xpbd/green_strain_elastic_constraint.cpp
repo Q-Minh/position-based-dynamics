@@ -44,7 +44,6 @@ green_strain_elastic_constraint_t::signed_volume(positions_type const& V) const
     Eigen::RowVector3d const p3 = V.row(indices()[2]);
     Eigen::RowVector3d const p4 = V.row(indices()[3]);
 
-    // auto const vol = (1. / 6.) * (p2 - p1).cross(p3 - p1).dot(p4 - p1);
     Eigen::Matrix3d Ds;
     Ds.col(0)      = (p1 - p4).transpose();
     Ds.col(1)      = (p2 - p4).transpose();
@@ -74,11 +73,12 @@ void green_strain_elastic_constraint_t::project(
     auto const w3 = 1. / m(v3);
     auto const w4 = 1. / m(v4);
 
-    auto const Vsigned = signed_volume(p);
+    auto const Vsigned        = signed_volume(p);
     bool const is_V_positive  = Vsigned >= 0.;
     bool const is_V0_positive = V0_ >= 0.;
     bool const is_tet_inverted =
         (is_V_positive && !is_V0_positive) || (!is_V_positive && is_V0_positive);
+    scalar_type constexpr epsilon = 1e-20;
 
     Eigen::Matrix3d Ds;
     Ds.col(0) = (p1 - p4).transpose();
@@ -88,59 +88,44 @@ void green_strain_elastic_constraint_t::project(
     Eigen::Matrix3d const F = Ds * DmInv_;
     Eigen::Matrix3d const I = Eigen::Matrix3d::Identity();
 
-    scalar_type constexpr epsilon = 1e-20;
+    // TODO: Implement correct inversion handling described in
+    // Irving, Geoffrey, Joseph Teran, and Ronald Fedkiw. "Invertible finite elements for robust
+    // simulation of large deformation." Proceedings of the 2004 ACM SIGGRAPH/Eurographics symposium
+    // on Computer animation. 2004.
+    // scalar_type psi{};
+    // Eigen::Matrix3d Piola;
+    Eigen::JacobiSVD<Eigen::Matrix3d> UFhatV(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::Vector3d const Fsigma = UFhatV.singularValues();
+    Eigen::Matrix3d Fhat;
+    Fhat.setZero();
+    Fhat(0, 0) = Fsigma(0);
+    Fhat(1, 1) = Fsigma(1);
+    Fhat(2, 2) = Fsigma(2);
 
-    Eigen::Matrix3d Piola;
-    scalar_type psi{};
+    Eigen::Matrix3d U       = UFhatV.matrixU();
+    Eigen::Matrix3d const V = UFhatV.matrixV();
 
     if (is_tet_inverted)
     {
-        Eigen::JacobiSVD<Eigen::Matrix3d> UFhatV(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
-        Eigen::Vector3d const Fsigma = UFhatV.singularValues();
-        Eigen::Matrix3d Fhat;
-        Fhat.setZero();
-        Fhat(0, 0) = Fsigma(0);
-        Fhat(1, 1) = Fsigma(1);
-        Fhat(2, 2) = Fsigma(2);
-
-        Eigen::Matrix3d U       = UFhatV.matrixU();
-        Eigen::Matrix3d const V = UFhatV.matrixV();
-
-        auto smallest_element_idx = 0;
-        if (Fsigma(0) < Fsigma(1) && Fsigma(0) < Fsigma(2))
-            smallest_element_idx = 0;
-        if (Fsigma(1) < Fsigma(0) && Fsigma(1) < Fsigma(2))
-            smallest_element_idx = 1;
-        if (Fsigma(2) < Fsigma(0) && Fsigma(2) < Fsigma(1))
-            smallest_element_idx = 2;
-
-        Fhat(smallest_element_idx, smallest_element_idx) =
-            -Fhat(smallest_element_idx, smallest_element_idx);
-        U.col(smallest_element_idx) = -U.col(smallest_element_idx);
-
-        // stress reaches maximum at 58% compression
-        scalar_type constexpr min_singular_value = 0.577;
-        Fhat(0, 0)                               = std::min(Fhat(0, 0), min_singular_value);
-        Fhat(1, 1)                               = std::min(Fhat(1, 1), min_singular_value);
-        Fhat(2, 2)                               = std::min(Fhat(2, 2), min_singular_value);
-
-        Eigen::Matrix3d const Ehat     = 0.5 * (Fhat.transpose() * Fhat - I);
-        scalar_type const trace        = Ehat.trace();
-        Eigen::Matrix3d const Piolahat = Fhat * ((2. * mu_ * Ehat) + (lambda_ * trace * I));
-
-        Eigen::Matrix3d const E = U * Ehat * V.transpose();
-        psi = mu_ * (E.array() * E.array()).sum() + 0.5 * lambda_ * E.trace() * E.trace();
-
-        Piola = U * Piolahat * V.transpose();
+        Fhat(2, 2) = -Fhat(2, 2);
+        U.col(2)   = -U.col(2);
     }
-    else
-    {
-        Eigen::Matrix3d const E = 0.5 * (F.transpose() * F - I);
 
-        scalar_type const trace = E.trace();
-        psi   = mu_ * (E.array() * E.array()).sum() + 0.5 * lambda_ * trace * trace;
-        Piola = F * ((2. * mu_ * E) + (lambda_ * E.trace() * I));
-    }
+    // stress reaches maximum at 58% compression
+    scalar_type constexpr min_singular_value = 0.577;
+    Fhat(0, 0)                               = std::max(Fhat(0, 0), min_singular_value);
+    Fhat(1, 1)                               = std::max(Fhat(1, 1), min_singular_value);
+    Fhat(2, 2)                               = std::max(Fhat(2, 2), min_singular_value);
+
+    Eigen::Matrix3d const Ehat     = 0.5 * (Fhat.transpose() * Fhat - I);
+    scalar_type const EhatTrace    = Ehat.trace();
+    Eigen::Matrix3d const Piolahat = Fhat * ((2. * mu_ * Ehat) + (lambda_ * EhatTrace * I));
+
+    Eigen::Matrix3d const E  = U * Ehat * V.transpose();
+    scalar_type const Etrace = E.trace();
+    scalar_type const psi = mu_ * (E.array() * E.array()).sum() + 0.5 * lambda_ * Etrace * Etrace;
+
+    Eigen::Matrix3d const Piola = U * Piolahat * V.transpose();
 
     // H is the negative gradient of the elastic potential
     scalar_type const V0     = std::abs(V0_);

@@ -3,6 +3,7 @@
 #include "xpbd/edge_length_constraint.h"
 #include "xpbd/green_strain_elastic_constraint.h"
 #include "xpbd/tetrahedron_volume_constraint.h"
+#include "xpbd/neohookean_elasticity_constraint.h"
 
 #include <array>
 #include <igl/barycenter.h>
@@ -110,6 +111,32 @@ void deformable_mesh_t::constrain_green_strain_elastic_potential(
     {
         auto const element = elements.row(i);
         auto constraint    = std::make_unique<green_strain_elastic_constraint_t>(
+            std::initializer_list<std::uint32_t>{
+                static_cast<std::uint32_t>(element(0)),
+                static_cast<std::uint32_t>(element(1)),
+                static_cast<std::uint32_t>(element(2)),
+                static_cast<std::uint32_t>(element(3))},
+            positions,
+            young_modulus,
+            poisson_ratio,
+            compliance);
+
+        this->constraints().push_back(std::move(constraint));
+    }
+}
+
+void deformable_mesh_t::constrain_neohookean_elasticity_potential(
+    scalar_type young_modulus,
+    scalar_type poisson_ratio,
+    scalar_type const compliance)
+{
+    auto const& positions = this->p0();
+    auto const& elements  = this->elements();
+
+    for (auto i = 0u; i < elements.rows(); ++i)
+    {
+        auto const element = elements.row(i);
+        auto constraint    = std::make_unique<neohookean_elasticity_constraint_t>(
             std::initializer_list<std::uint32_t>{
                 static_cast<std::uint32_t>(element(0)),
                 static_cast<std::uint32_t>(element(1)),

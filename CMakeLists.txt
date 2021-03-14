@@ -49,6 +49,7 @@ PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/deformable_mesh.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/edge_length_constraint.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/green_strain_elastic_constraint.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/neohookean_elasticity_constraint.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/tetrahedron_volume_constraint.cpp
 
     # solver
@@ -70,6 +71,7 @@ PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include/xpbd/deformable_mesh.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/xpbd/edge_length_constraint.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/xpbd/green_strain_elastic_constraint.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/xpbd/neohookean_elasticity_constraint.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/xpbd/tetrahedron_volume_constraint.h
 
     # solver
