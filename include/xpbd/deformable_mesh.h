@@ -36,6 +36,7 @@ class deformable_mesh_t
           constraints_{},
           fixed_(positions.rows(), false)
     {
+        v_.setZero();
     }
 
     deformable_mesh_t(

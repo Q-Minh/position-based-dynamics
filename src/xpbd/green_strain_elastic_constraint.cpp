@@ -159,4 +159,79 @@ void green_strain_elastic_constraint_t::project(
     p.row(v4) += w4 * -f4 * delta_lagrange;
 }
 
+green_strain_elastic_constraint_t::scalar_type
+green_strain_elastic_constraint_t::evaluate(positions_type const& p, masses_type const& m) const
+{
+    auto const v1 = this->indices().at(0);
+    auto const v2 = this->indices().at(1);
+    auto const v3 = this->indices().at(2);
+    auto const v4 = this->indices().at(3);
+
+    auto const p1 = p.row(v1);
+    auto const p2 = p.row(v2);
+    auto const p3 = p.row(v3);
+    auto const p4 = p.row(v4);
+
+    auto const w1 = 1. / m(v1);
+    auto const w2 = 1. / m(v2);
+    auto const w3 = 1. / m(v3);
+    auto const w4 = 1. / m(v4);
+
+    auto const Vsigned        = signed_volume(p);
+    bool const is_V_positive  = Vsigned >= 0.;
+    bool const is_V0_positive = V0_ >= 0.;
+    bool const is_tet_inverted =
+        (is_V_positive && !is_V0_positive) || (!is_V_positive && is_V0_positive);
+    scalar_type constexpr epsilon = 1e-20;
+
+    Eigen::Matrix3d Ds;
+    Ds.col(0) = (p1 - p4).transpose();
+    Ds.col(1) = (p2 - p4).transpose();
+    Ds.col(2) = (p3 - p4).transpose();
+
+    Eigen::Matrix3d const F = Ds * DmInv_;
+    Eigen::Matrix3d const I = Eigen::Matrix3d::Identity();
+
+    // TODO: Implement correct inversion handling described in
+    // Irving, Geoffrey, Joseph Teran, and Ronald Fedkiw. "Invertible finite elements for robust
+    // simulation of large deformation." Proceedings of the 2004 ACM SIGGRAPH/Eurographics symposium
+    // on Computer animation. 2004.
+    // scalar_type psi{};
+    // Eigen::Matrix3d Piola;
+    Eigen::JacobiSVD<Eigen::Matrix3d> UFhatV(F, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::Vector3d const Fsigma = UFhatV.singularValues();
+    Eigen::Matrix3d Fhat;
+    Fhat.setZero();
+    Fhat(0, 0) = Fsigma(0);
+    Fhat(1, 1) = Fsigma(1);
+    Fhat(2, 2) = Fsigma(2);
+
+    Eigen::Matrix3d U       = UFhatV.matrixU();
+    Eigen::Matrix3d const V = UFhatV.matrixV();
+
+    if (is_tet_inverted)
+    {
+        Fhat(2, 2) = -Fhat(2, 2);
+        U.col(2)   = -U.col(2);
+    }
+
+    // stress reaches maximum at 58% compression
+    scalar_type constexpr min_singular_value = 0.577;
+    Fhat(0, 0)                               = std::max(Fhat(0, 0), min_singular_value);
+    Fhat(1, 1)                               = std::max(Fhat(1, 1), min_singular_value);
+    Fhat(2, 2)                               = std::max(Fhat(2, 2), min_singular_value);
+
+    Eigen::Matrix3d const Ehat     = 0.5 * (Fhat.transpose() * Fhat - I);
+    scalar_type const EhatTrace    = Ehat.trace();
+    Eigen::Matrix3d const Piolahat = Fhat * ((2. * mu_ * Ehat) + (lambda_ * EhatTrace * I));
+
+    Eigen::Matrix3d const E  = U * Ehat * V.transpose();
+    scalar_type const Etrace = E.trace();
+    scalar_type const psi = mu_ * (E.array() * E.array()).sum() + 0.5 * lambda_ * Etrace * Etrace;
+
+    scalar_type const V0 = std::abs(V0_);
+    scalar_type const C = V0 * psi;
+    return C;
+}
+
 } // namespace xpbd

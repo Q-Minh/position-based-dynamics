@@ -22,6 +22,11 @@ class constraint_t
     {
     }
 
+    virtual scalar_type evaluate(positions_type const& V, masses_type const& M) const
+    {
+        return scalar_type{0.};
+    }
+
     virtual void
     project(positions_type& V, masses_type const& M, scalar_type& lagrange, scalar_type const dt)
         const = 0;

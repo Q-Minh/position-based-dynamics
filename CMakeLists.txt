@@ -28,7 +28,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(_libigl)
 
-# find_package(range-v3 CONFIG REQUIRED)
+FetchContent_Declare(matplotplusplus
+    GIT_REPOSITORY https://github.com/alandefreitas/matplotplusplus
+    GIT_TAG origin/master
+)
+FetchContent_GetProperties(matplotplusplus)
+if(NOT matplotplusplus_POPULATED)
+    FetchContent_Populate(matplotplusplus)
+    add_subdirectory(${matplotplusplus_SOURCE_DIR} ${matplotplusplus_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 add_executable(pbd)
 set_target_properties(pbd PROPERTIES FOLDER position-based-dynamics)
@@ -90,5 +98,30 @@ PRIVATE
     igl::core 
     igl::tetgen
     igl::opengl_glfw_imgui
-    # range-v3::range-v3
 )
+
+add_executable(pbd-plot)
+set_target_properties(pbd-plot PROPERTIES FOLDER position-based-dynamics)
+target_compile_features(pbd-plot PRIVATE cxx_std_17)
+
+target_include_directories(pbd-plot
+PRIVATE
+    include
+)
+
+target_sources(pbd-plot
+PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/plot.cpp
+
+    # xpbd
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/deformable_mesh.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/edge_length_constraint.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/green_strain_elastic_constraint.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/neohookean_elasticity_constraint.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/xpbd/tetrahedron_volume_constraint.cpp
+
+    # solver
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/solver/solve.cpp
+)
+
+target_link_libraries(pbd-plot PRIVATE matplot igl::core igl::tetgen)

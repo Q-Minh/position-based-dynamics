@@ -28,6 +28,8 @@ class green_strain_elastic_constraint_t : public constraint_t
     project(positions_type& p, masses_type const& m, scalar_type& lagrange, scalar_type const dt)
         const override;
 
+    virtual scalar_type evaluate(positions_type const& V, masses_type const& M) const override;
+
   protected:
     scalar_type signed_volume(positions_type const& V) const;
 
