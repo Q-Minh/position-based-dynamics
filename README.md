@@ -1,9 +1,9 @@
-# Soft Body Virtual Cutting using eXtended Position Based Dynamics
+# Soft Body Simulation using eXtended Position Based Dynamics
 
 ## Overview
 
-Academic prototyping project for soft body cutting using XPBD.
-Different constraint types and cutting methods will be implemented 
+Academic prototyping project for soft body simulation using XPBD.
+Different constraint types will be implemented 
 using [Eigen](https://eigen.tuxfamily.org/index.php?title=Main_Page) for matrix computations and [libigl](https://libigl.github.io/) for visualization and 
 user interaction.
 
@@ -13,10 +13,6 @@ user interaction.
 - edge length
 - tetrahedral volume
 - fem based
-
-#### Cutting methods
-- element deletion
-- swept surface
 
 ![Bar simulation example](./doc/bar-fem-xpbd.gif)
 ![Cloth simulation example](./doc/pbd-simple-cloth-example.gif)
